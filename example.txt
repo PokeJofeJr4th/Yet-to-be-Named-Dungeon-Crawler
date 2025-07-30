@@ -1,16 +1,16 @@
 ROOM Entrance Hall
-DESC A cold stone chamber with dripping moss.
-ITEM Rusty Sword
-ENEMY Goblin Scout
-EXIT NORTH Great Hall
+ DESC  A cold stone chamber with dripping moss.
+ ITEM  Rusty Sword
+ ENEMY Goblin Scout
+ EXIT  NORTH Great Hall
 
 ROOM Great Hall
-DESC A vast hall with a broken chandelier.
-ENEMY Orc Brute
-EXIT SOUTH Entrance Hall
-EXIT EAST Armory
+ DESC  A vast hall with a broken chandelier.
+ ENEMY Orc Brute
+ EXIT  SOUTH Entrance Hall
+ EXIT  EAST  Armory
 
 ROOM Armory
-DESC Shelves lined with dust and old weapons.
-ITEM Healing Potion
-EXIT WEST Great Hall
+ DESC Shelves lined with dust and old weapons.
+ ITEM Healing Potion
+ EXIT WEST Great Hall

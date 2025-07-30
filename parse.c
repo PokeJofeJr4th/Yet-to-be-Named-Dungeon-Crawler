@@ -4,159 +4,267 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-typedef struct ExitP
+typedef struct ExitTmp
 {
     char *exit_to;
-    struct ExitP *next;
+    struct ExitTmp *next;
     enum Direction exit_dir;
 };
 
-typedef struct EnemyP
+typedef struct EnemyTmp
 {
     char *name;
-    struct EnemyP *next;
+    struct EnemyTmp *next;
 };
 
-typedef struct ItemP
+typedef struct ItemTmp
 {
     char *name;
-    struct ItemP *next;
+    struct ItemTmp *next;
 };
 
-typedef struct RoomP
+typedef struct RoomTmp
 {
     char *name;
     char *desc;
-    struct ExitP *exits;
-    struct EnemyP *enemies;
-    struct ItemP *items;
-    struct RoomP *next;
+    int num_exits;
+    int num_enemies;
+    int num_items;
+    struct ExitTmp *exits;
+    struct EnemyTmp *enemies;
+    struct ItemTmp *items;
+    struct RoomTmp *next;
 };
 
-typedef struct DungeonP
+typedef struct DungeonTmp
 {
-    struct RoomP *rooms;
+    struct RoomTmp *rooms;
 };
 
-char *fmt_dir(enum Direction d);
-void print_dungeon(struct DungeonP d);
+char *fmt_dir(enum Direction);
+void print_dungeon_tmp(struct DungeonTmp);
+void print_dungeon(struct Dungeon *);
+
+char *trim_wspace(char *p)
+{
+    while (isspace(*p++))
+        ;
+    return --p;
+}
 
 struct Dungeon *load_dungeon(char *filename)
 {
-    struct DungeonP d;
+    struct DungeonTmp dungeon_tmp;
     int num_rooms = 0;
-    d.rooms = 0;
-    char l[128];
+    dungeon_tmp.rooms = 0;
+    char line_buffer[128];
     FILE *f = fopen(filename, "r");
 
-    while (fgets(l, 128, f))
+    while (fgets(line_buffer, 128, f))
     {
-        for (int i = strlen(l) - 1; i > 0 && isspace(l[i]); l[i++] = '\0')
+        for (int i = strlen(line_buffer) - 1; i > 0 && isspace(line_buffer[i]); line_buffer[i--] = '\0')
             ;
-        char *line = l;
-        while (isspace(*line++))
-            ;
-        line--;
+        char *line = trim_wspace(line_buffer);
         if (strncmp(line, "ROOM ", 5) == 0)
         {
+            // starting a new room
             num_rooms++;
-            struct RoomP *r = malloc(sizeof(struct RoomP));
-            r->next = d.rooms;
-            d.rooms = r;
-            r->enemies = 0;
-            r->exits = 0;
-            r->items = 0;
-            r->name = strdup(line + 5);
-            r->desc = "";
+            // allocate space for the new room
+            struct RoomTmp *room_tmp = malloc(sizeof(struct RoomTmp));
+            // hook it up to the linked list
+            room_tmp->next = dungeon_tmp.rooms;
+            dungeon_tmp.rooms = room_tmp;
+            // initialize all the other fields
+            room_tmp->num_exits = 0;
+            room_tmp->num_enemies = 0;
+            room_tmp->num_items = 0;
+            room_tmp->enemies = 0;
+            room_tmp->exits = 0;
+            room_tmp->items = 0;
+            // copy the name over
+            room_tmp->name = strdup(trim_wspace(line + 5));
+            // set an empty description
+            room_tmp->desc = "";
         }
         else if (strncmp(line, "EXIT ", 5) == 0)
         {
             enum Direction dir;
             char *exit;
-            if (strncmp(line + 5, "NORTH ", 6) == 0)
+            line = trim_wspace(line + 5);
+            if (strncmp(line, "NORTH ", 6) == 0)
             {
                 dir = NORTH;
-                exit = strdup(line + 11);
+                exit = strdup(trim_wspace(line + 6));
             }
-            else if (strncmp(line + 5, "SOUTH ", 6) == 0)
+            else if (strncmp(line, "SOUTH ", 6) == 0)
             {
                 dir = SOUTH;
-                exit = strdup(line + 11);
+                exit = strdup(trim_wspace(line + 6));
             }
-            else if (strncmp(line + 5, "EAST ", 5) == 0)
+            else if (strncmp(line, "EAST ", 5) == 0)
             {
                 dir = EAST;
-                exit = strdup(line + 10);
+                exit = strdup(trim_wspace(line + 5));
             }
-            else if (strncmp(line + 5, "WEST ", 5) == 0)
+            else if (strncmp(line, "WEST ", 5) == 0)
             {
                 dir = WEST;
-                exit = strdup(line + 10);
+                exit = strdup(trim_wspace(line + 5));
             }
             else
             {
                 // TODO: error that you're trying to go in an invalid direction
                 continue;
             }
-            struct ExitP *e = malloc(sizeof(struct ExitP));
-            e->exit_dir = dir;
-            e->exit_to = exit;
-            e->next = d.rooms->exits;
-            d.rooms->exits = e;
+            struct ExitTmp *exit_tmp = malloc(sizeof(struct ExitTmp));
+            exit_tmp->exit_dir = dir;
+            exit_tmp->exit_to = exit;
+            exit_tmp->next = dungeon_tmp.rooms->exits;
+            dungeon_tmp.rooms->exits = exit_tmp;
+            dungeon_tmp.rooms->num_exits++;
         }
         else if (strncmp(line, "ITEM ", 5) == 0)
         {
-            struct ItemP *i = malloc(sizeof(struct ItemP));
-            i->name = strdup(line + 5);
-            i->next = d.rooms->items;
-            d.rooms->items = i;
+            struct ItemTmp *item_tmp = malloc(sizeof(struct ItemTmp));
+            // copy the item name
+            item_tmp->name = strdup(trim_wspace(line + 5));
+            // hook up to the linked list
+            item_tmp->next = dungeon_tmp.rooms->items;
+            dungeon_tmp.rooms->items = item_tmp;
+            dungeon_tmp.rooms->num_items++;
         }
         else if (strncmp(line, "ENEMY ", 6) == 0)
         {
-            struct EnemyP *e = malloc(sizeof(struct EnemyP));
-            e->name = strdup(line + 6);
-            e->next = d.rooms->enemies;
-            d.rooms->enemies = e;
+            struct EnemyTmp *enemy_tmp = malloc(sizeof(struct EnemyTmp));
+            // copy the enemy name
+            enemy_tmp->name = strdup(trim_wspace(line + 6));
+            // hook up to the linked list
+            enemy_tmp->next = dungeon_tmp.rooms->enemies;
+            dungeon_tmp.rooms->enemies = enemy_tmp;
+            dungeon_tmp.rooms->num_enemies++;
         }
         else if (strncmp(line, "DESC ", 5) == 0)
         {
-            d.rooms->desc = strdup(line + 5);
+            // add a description to the current room
+            dungeon_tmp.rooms->desc = strdup(trim_wspace(line + 5));
         }
-        // ignore empty/invalid lines?
+        // ignore empty/invalid lines (?)
     }
     fclose(f);
-    struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room *) * num_rooms);
-    print_dungeon(d);
-    return 0;
+    // print_dungeon_tmp(dungeon_tmp);
+    // allocate the dungeon with enough space to store all the rooms
+    struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * num_rooms);
+    dungeon->num_rooms = num_rooms;
+    // loop through the rooms of the tmp and final dungeon in parallel
+    struct Room *room = dungeon->rooms;
+    for (struct RoomTmp *room_tmp = dungeon_tmp.rooms; room_tmp != 0; room_tmp = room_tmp->next)
+    {
+        // move over the name and description
+        room->name = room_tmp->name;
+        room->desc = room_tmp->desc;
+        // move over the enemies
+        room->num_enemies = room_tmp->num_enemies;
+        room->enemies = malloc(sizeof(struct Enemy) * room->num_enemies);
+        struct Enemy *enemy = room->enemies;
+        for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
+        {
+            enemy->name = enemy_tmp->name;
+            enemy++;
+        }
+        // move over the exits
+        room->num_exits = room_tmp->num_exits;
+        room->exits = malloc(sizeof(struct Exit) * room->num_exits);
+        struct Exit *exit = room->exits;
+        for (struct ExitTmp *exit_tmp = room_tmp->exits; exit_tmp != 0; exit_tmp = exit_tmp->next)
+        {
+            exit->dir = exit_tmp->exit_dir;
+            // default room in case something goes wrong
+            exit->room = 0;
+            // find the ID of the room the exit is going to
+            int i = 0;
+            for (struct RoomTmp *room_candidate = dungeon_tmp.rooms; room_candidate != 0; room_candidate = room_candidate->next)
+            {
+                if (strcmp(exit_tmp->exit_to, room_candidate->name) == 0)
+                {
+                    exit->room = i;
+                    break;
+                }
+                i++;
+            }
+            exit++;
+        }
+        // move over the items
+        room->num_items = room_tmp->num_items;
+        room->items = malloc(sizeof(struct Item) * room->num_items);
+        struct Item *item = room->items;
+        for (struct ItemTmp *item_tmp = room_tmp->items; item_tmp != 0; item_tmp = item_tmp->next)
+        {
+            item->name = item_tmp->name;
+            item++;
+        }
+        // go to the next room in the array
+        room++;
+    }
+    // print_dungeon(dungeon);
+    return dungeon;
 }
 
-void print_dungeon(struct DungeonP d)
+void print_dungeon_tmp(struct DungeonTmp dungeon)
 {
-    for (struct RoomP *r = d.rooms; r != 0; r = r->next)
+    for (struct RoomTmp *room = dungeon.rooms; room != 0; room = room->next)
     {
-        printf("\nROOM %s", r->name);
-        if (*r->desc)
+        printf("\nROOM %s", room->name);
+        if (*room->desc)
         {
-            printf("\n DESC %s", r->desc);
+            printf("\n DESC %s", room->desc);
         }
-        for (struct EnemyP *e = r->enemies; e != 0; e = e->next)
+        for (struct EnemyTmp *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
-            printf("\n ENEMY %s", e->name);
+            printf("\n ENEMY %s", enemy->name);
         }
-        for (struct ItemP *i = r->items; i != 0; i = i->next)
+        for (struct ItemTmp *item = room->items; item != 0; item = item->next)
         {
-            printf("\n ITEM %s", i->name);
+            printf("\n ITEM %s", item->name);
         }
-        for (struct ExitP *e = r->exits; e != 0; e = e->next)
+        for (struct ExitTmp *exit = room->exits; exit != 0; exit = exit->next)
         {
-            printf("\n EXIT %s %s", fmt_dir(e->exit_dir), e->exit_to);
+            printf("\n EXIT %s %s", fmt_dir(exit->exit_dir), exit->exit_to);
         }
     }
 }
 
-char *fmt_dir(enum Direction d)
+void print_dungeon(struct Dungeon *dungeon)
 {
-    switch (d)
+    printf("\n");
+    for (int room_id = 0; room_id < dungeon->num_rooms; room_id++)
+    {
+        struct Room *room = &dungeon->rooms[room_id];
+        printf("\nROOM %s", room->name);
+        if (*room->desc)
+        {
+            printf("\n DESC %s", room->desc);
+        }
+        for (int enemy_id = 0; enemy_id < room->num_enemies; enemy_id++)
+        {
+            struct Enemy *enemy = &room->enemies[enemy_id];
+            printf("\n ENEMY %s", enemy->name);
+        }
+        for (int item_id = 0; item_id < room->num_items; item_id++)
+        {
+            struct Item *item = &room->items[item_id];
+            printf("\n ITEM %s", item->name);
+        }
+        for (int exit_id = 0; exit_id < room->num_exits; exit_id++)
+        {
+            struct Exit *exit = &room->exits[exit_id];
+            printf("\n EXIT %s %s", fmt_dir(exit->dir), dungeon->rooms[exit->room].name);
+        }
+    }
+}
+
+char *fmt_dir(enum Direction dir)
+{
+    switch (dir)
     {
     case NORTH:
         return "NORTH";
@@ -166,5 +274,7 @@ char *fmt_dir(enum Direction d)
         return "EAST";
     case WEST:
         return "WEST";
+    default:
+        return "ERROR";
     }
 }
