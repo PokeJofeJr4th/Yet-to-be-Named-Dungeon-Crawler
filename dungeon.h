@@ -42,4 +42,5 @@ typedef struct Dungeon
     struct Room rooms[];
 };
 
+char *fmt_dir(enum Direction);
 struct Dungeon *load_dungeon(char *);

@@ -49,7 +49,6 @@ typedef struct DungeonTmp
     struct RoomTmp *rooms;
 };
 
-char *fmt_dir(enum Direction);
 void print_dungeon_tmp(struct DungeonTmp);
 void print_dungeon(struct Dungeon *);
 
@@ -171,7 +170,7 @@ struct Dungeon *load_dungeon(char *filename)
         // ignore empty/invalid lines (?)
     }
     fclose(f);
-    print_dungeon_tmp(dungeon_tmp);
+    // print_dungeon_tmp(dungeon_tmp);
     // allocate the dungeon with enough space to store all the rooms
     struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * num_rooms);
     dungeon->num_rooms = num_rooms;
@@ -199,7 +198,7 @@ struct Dungeon *load_dungeon(char *filename)
         {
             exit->dir = exit_tmp->exit_dir;
             // default room in case something goes wrong
-            exit->room = 0;
+            exit->room = -1;
             // find the ID of the room the exit is going to
             int i = 0;
             for (struct RoomTmp *room_candidate = dungeon_tmp.rooms; room_candidate != 0; room_candidate = room_candidate->next)
@@ -210,6 +209,10 @@ struct Dungeon *load_dungeon(char *filename)
                     break;
                 }
                 i++;
+            }
+            if (exit->room == -1)
+            {
+                printf("Can't find room %s\n", exit_tmp->exit_to);
             }
             exit++;
         }
@@ -234,7 +237,7 @@ struct Dungeon *load_dungeon(char *filename)
         // go to the next room in the array
         room++;
     }
-    print_dungeon(dungeon);
+    // print_dungeon(dungeon);
     return dungeon;
 }
 

@@ -1,24 +1,110 @@
 #include "dungeon.h"
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
+
+void read_input(char *buffer)
+{
+    printf("\n> ");
+    fgets(buffer, 128, stdin);
+    for (int i = strlen(buffer) - 1; i > 0 && isspace(buffer[i]); buffer[i--] = '\0')
+        ;
+    printf("%s\n", buffer);
+}
 
 int main()
 {
     struct Dungeon *dungeon = load_dungeon("example.txt");
-    int current_room = -1;
+    struct Room *room = 0;
     for (int i = 0; i < dungeon->num_rooms; i++)
     {
-        struct Room *room = &dungeon->rooms[i];
-        for (int t = 0; t < room->num_tags; t++)
+        struct Room *r = &dungeon->rooms[i];
+        for (int t = 0; t < r->num_tags; t++)
         {
-            if (strcmp(room->tags[t], "START") == 0)
+            if (strcmp(r->tags[t], "START") == 0)
             {
-                current_room = i;
+                room = r;
                 break;
             }
         }
-        if (current_room != -1)
+        if (room != 0)
             break;
     }
-    printf("\nStarting in %s: %s", dungeon->rooms[current_room].name, dungeon->rooms[current_room].desc);
+    char cmd_buffer[128];
+    while (1)
+    {
+        printf("%s\n %s\n", room->name, room->desc);
+        if (room->num_enemies != 0)
+        {
+            printf("Enemies:\n");
+            for (int i = 0; i < room->num_enemies; i++)
+            {
+                printf(" %s\n", room->enemies[i].name);
+            }
+        }
+        if (room->num_items != 0)
+        {
+            printf("Items:\n");
+            for (int i = 0; i < room->num_items; i++)
+            {
+                printf(" %s\n", room->items[i].name);
+            }
+        }
+        if (room->num_exits != 0)
+        {
+            printf("Exits:\n");
+            for (int i = 0; i < room->num_exits; i++)
+            {
+                printf(" %s: %s\n", fmt_dir(room->exits[i].dir), dungeon->rooms[room->exits[i].room].name);
+            }
+        }
+        read_input(cmd_buffer);
+        if (strncmp(cmd_buffer, "move ", 5) == 0)
+        {
+            enum Direction dir;
+            if (stricmp(cmd_buffer + 5, "north") == 0)
+            {
+                dir = NORTH;
+            }
+            else if (stricmp(cmd_buffer + 5, "south") == 0)
+            {
+                dir = SOUTH;
+            }
+            else if (stricmp(cmd_buffer + 5, "east") == 0)
+            {
+                dir = EAST;
+            }
+            else if (stricmp(cmd_buffer + 5, "west") == 0)
+            {
+                dir = WEST;
+            }
+            else
+            {
+                printf("Unknown direction\n");
+                continue;
+            }
+            int new_room = -1;
+            for (int i = 0; i < room->num_exits; i++)
+            {
+                struct Exit e = room->exits[i];
+                if (e.dir == dir)
+                {
+                    new_room = room->exits[i].room;
+                    break;
+                }
+            }
+            if (new_room == -1)
+            {
+                printf("Invalid exit\n");
+            }
+            else
+            {
+                room = &dungeon->rooms[new_room];
+            }
+        }
+        else
+        {
+            printf("Unknown command\n");
+        }
+    }
 }
