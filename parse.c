@@ -23,6 +23,12 @@ typedef struct ItemTmp
     struct ItemTmp *next;
 };
 
+typedef struct TagTmp
+{
+    char *tag;
+    struct TagTmp *next;
+};
+
 typedef struct RoomTmp
 {
     char *name;
@@ -30,9 +36,11 @@ typedef struct RoomTmp
     int num_exits;
     int num_enemies;
     int num_items;
+    int num_tags;
     struct ExitTmp *exits;
     struct EnemyTmp *enemies;
     struct ItemTmp *items;
+    struct TagTmp *tags;
     struct RoomTmp *next;
 };
 
@@ -78,9 +86,11 @@ struct Dungeon *load_dungeon(char *filename)
             room_tmp->num_exits = 0;
             room_tmp->num_enemies = 0;
             room_tmp->num_items = 0;
+            room_tmp->num_tags = 0;
             room_tmp->enemies = 0;
             room_tmp->exits = 0;
             room_tmp->items = 0;
+            room_tmp->tags = 0;
             // copy the name over
             room_tmp->name = strdup(trim_wspace(line + 5));
             // set an empty description
@@ -148,10 +158,20 @@ struct Dungeon *load_dungeon(char *filename)
             // add a description to the current room
             dungeon_tmp.rooms->desc = strdup(trim_wspace(line + 5));
         }
+        else if (strncmp(line, "TAG ", 4) == 0)
+        {
+            struct TagTmp *tag_tmp = malloc(sizeof(struct TagTmp));
+            // copy the tag name
+            tag_tmp->tag = strdup(trim_wspace(line + 4));
+            // hook up to the linked list
+            tag_tmp->next = dungeon_tmp.rooms->tags;
+            dungeon_tmp.rooms->tags = tag_tmp;
+            dungeon_tmp.rooms->num_tags++;
+        }
         // ignore empty/invalid lines (?)
     }
     fclose(f);
-    // print_dungeon_tmp(dungeon_tmp);
+    print_dungeon_tmp(dungeon_tmp);
     // allocate the dungeon with enough space to store all the rooms
     struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * num_rooms);
     dungeon->num_rooms = num_rooms;
@@ -202,10 +222,19 @@ struct Dungeon *load_dungeon(char *filename)
             item->name = item_tmp->name;
             item++;
         }
+        // move over the tags
+        room->num_tags = room_tmp->num_tags;
+        room->tags = malloc(sizeof(char *) * room->num_tags);
+        char **tag = room->tags;
+        for (struct TagTmp *tag_tmp = room_tmp->tags; tag_tmp != 0; tag_tmp = tag_tmp->next)
+        {
+            *tag = tag_tmp->tag;
+            tag++;
+        }
         // go to the next room in the array
         room++;
     }
-    // print_dungeon(dungeon);
+    print_dungeon(dungeon);
     return dungeon;
 }
 
@@ -213,51 +242,58 @@ void print_dungeon_tmp(struct DungeonTmp dungeon)
 {
     for (struct RoomTmp *room = dungeon.rooms; room != 0; room = room->next)
     {
-        printf("\nROOM %s", room->name);
+        printf("\nROOM %s\n", room->name);
         if (*room->desc)
         {
-            printf("\n DESC %s", room->desc);
+            printf(" DESC %s\n", room->desc);
+        }
+        for (struct TagTmp *tag = room->tags; tag != 0; tag = tag->next)
+        {
+            printf(" TAG %s\n", tag->tag);
         }
         for (struct EnemyTmp *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
-            printf("\n ENEMY %s", enemy->name);
+            printf(" ENEMY %s\n", enemy->name);
         }
         for (struct ItemTmp *item = room->items; item != 0; item = item->next)
         {
-            printf("\n ITEM %s", item->name);
+            printf(" ITEM %s\n", item->name);
         }
         for (struct ExitTmp *exit = room->exits; exit != 0; exit = exit->next)
         {
-            printf("\n EXIT %s %s", fmt_dir(exit->exit_dir), exit->exit_to);
+            printf(" EXIT %s %s\n", fmt_dir(exit->exit_dir), exit->exit_to);
         }
     }
 }
 
 void print_dungeon(struct Dungeon *dungeon)
 {
-    printf("\n");
     for (int room_id = 0; room_id < dungeon->num_rooms; room_id++)
     {
         struct Room *room = &dungeon->rooms[room_id];
-        printf("\nROOM %s", room->name);
+        printf("\nROOM %s\n", room->name);
         if (*room->desc)
         {
-            printf("\n DESC %s", room->desc);
+            printf(" DESC %s\n", room->desc);
+        }
+        for (int tag_id = 0; tag_id < room->num_tags; tag_id++)
+        {
+            printf(" TAG %s\n", room->tags[tag_id]);
         }
         for (int enemy_id = 0; enemy_id < room->num_enemies; enemy_id++)
         {
             struct Enemy *enemy = &room->enemies[enemy_id];
-            printf("\n ENEMY %s", enemy->name);
+            printf(" ENEMY %s\n", enemy->name);
         }
         for (int item_id = 0; item_id < room->num_items; item_id++)
         {
             struct Item *item = &room->items[item_id];
-            printf("\n ITEM %s", item->name);
+            printf(" ITEM %s\n", item->name);
         }
         for (int exit_id = 0; exit_id < room->num_exits; exit_id++)
         {
             struct Exit *exit = &room->exits[exit_id];
-            printf("\n EXIT %s %s", fmt_dir(exit->dir), dungeon->rooms[exit->room].name);
+            printf(" EXIT %s %s\n", fmt_dir(exit->dir), dungeon->rooms[exit->room].name);
         }
     }
 }

@@ -29,9 +29,11 @@ typedef struct Room
     int num_exits;
     int num_enemies;
     int num_items;
+    int num_tags;
     struct Enemy *enemies;
     struct Item *items;
     struct Exit *exits;
+    char **tags;
 };
 
 typedef struct Dungeon
