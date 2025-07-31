@@ -134,6 +134,29 @@ int main()
                 prev = item;
             }
         }
+        else if (strncmp(cmd_buffer, "drop ", 5) == 0)
+        {
+            char *item_name = trim_wspace(cmd_buffer + 5);
+            struct Item *prev = 0;
+            for (struct Item *item = inventory; item != 0; item = item->next)
+            {
+                if (strcmp(item_name, item->name) == 0)
+                {
+                    if (prev == 0)
+                    {
+                        inventory = item->next;
+                    }
+                    else
+                    {
+                        prev->next = item->next;
+                    }
+                    item->next = room->items;
+                    room->items = item;
+                    break;
+                }
+                prev = item;
+            }
+        }
         else if (strcmp(cmd_buffer, "q") == 0)
         {
             break;
