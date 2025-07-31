@@ -10,6 +10,7 @@ void read_input(char *buffer)
     fgets(buffer, 128, stdin);
     for (int i = strlen(buffer) - 1; i > 0 && isspace(buffer[i]); buffer[i--] = '\0')
         ;
+    printf("\n");
     // printf("%s\n", buffer);
 }
 
@@ -18,6 +19,11 @@ int main()
     struct Dungeon *dungeon = load_dungeon("example.txt");
     struct Item *inventory = 0;
     struct Room *room = 0;
+    struct Combatant player;
+    player.atk = 1;
+    player.hp = 10;
+    player.def = 0;
+    strcpy(player.name, "You");
     for (int i = 0; i < dungeon->num_rooms; i++)
     {
         struct Room *r = &dungeon->rooms[i];
@@ -63,7 +69,7 @@ int main()
         printf("\n");
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
-            printf("%s attacks you, dealing %i damage!", enemy->stats.name, enemy->stats.atk);
+            fight(&enemy->stats, &player);
         }
         printf("\n");
         if (inventory != 0)
@@ -172,8 +178,7 @@ int main()
             {
                 if (strcmp(enemy->stats.name, enemy_name) == 0)
                 {
-                    enemy->stats.hp--;
-                    printf("You attack %s, dealing %i damage!", enemy->stats.name, 1);
+                    fight(&player, &enemy->stats);
                     if (enemy->stats.hp <= 0)
                     {
                         if (prev == 0)

@@ -35,7 +35,7 @@ struct TagTmp
 struct RoomTmp
 {
     char name[32];
-    char desc[32];
+    char desc[128];
     int num_exits;
     int num_tags;
     struct ExitTmp *exits;
@@ -184,7 +184,7 @@ struct Dungeon *load_dungeon(char *filename)
         else if (strncmp(line, "DESC ", 5) == 0)
         {
             // add a description to the current room
-            strncpy(dungeon_tmp.rooms->desc, trim_wspace(line + 5), 32);
+            strncpy(dungeon_tmp.rooms->desc, trim_wspace(line + 5), 128);
         }
         else if (strncmp(line, "TAG ", 4) == 0)
         {
@@ -212,7 +212,7 @@ struct Dungeon *load_dungeon(char *filename)
         room->items = 0;
         // move over the name and description
         strncpy(room->name, room_tmp->name, 32);
-        strncpy(room->desc, room_tmp->desc, 32);
+        strncpy(room->desc, room_tmp->desc, 128);
         // move over the enemies
         for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
         {

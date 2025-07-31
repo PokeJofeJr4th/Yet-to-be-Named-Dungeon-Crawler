@@ -34,7 +34,7 @@ struct Exit
 struct Room
 {
     char name[32];
-    char desc[32];
+    char desc[128];
     int num_exits;
     int num_tags;
     struct Enemy *enemies;
@@ -52,3 +52,4 @@ struct Dungeon
 char *fmt_dir(enum Direction);
 char *trim_wspace(char *);
 struct Dungeon *load_dungeon(char *);
+void fight(struct Combatant *attacker, struct Combatant *target);
