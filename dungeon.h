@@ -5,17 +5,23 @@ enum Direction
     EAST,
     WEST
 };
+struct Combatant
+{
+    char name[32];
+    int hp;
+    int atk;
+    int def;
+};
 
 struct Enemy
 {
-    char *name;
-    int hp;
+    struct Combatant stats;
     struct Enemy *next;
 };
 
 struct Item
 {
-    char *name;
+    char name[32];
     struct Item *next;
 };
 
@@ -27,8 +33,8 @@ struct Exit
 
 struct Room
 {
-    char *name;
-    char *desc;
+    char name[32];
+    char desc[32];
     int num_exits;
     int num_tags;
     struct Enemy *enemies;

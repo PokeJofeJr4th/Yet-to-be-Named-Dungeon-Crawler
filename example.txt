@@ -10,6 +10,8 @@ ROOM Great Hall
  DESC  A vast hall with a broken chandelier.
  ENEMY Orc Brute
   HP   4
+  ATK  2
+  DEF  1
  EXIT  SOUTH Entrance Hall
  EXIT  EAST  Armory
 

@@ -40,7 +40,7 @@ int main()
             printf("Enemies:\n");
             for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
             {
-                printf(" %s (%u HP)\n", enemy->name, enemy->hp);
+                printf(" %s (%u HP, %u ATK, %u DEF)\n", enemy->stats.name, enemy->stats.hp, enemy->stats.atk, enemy->stats.def);
             }
         }
         if (room->items != 0)

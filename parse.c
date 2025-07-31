@@ -6,34 +6,36 @@
 
 struct ExitTmp
 {
-    char *exit_to;
+    char exit_to[32];
     struct ExitTmp *next;
     enum Direction exit_dir;
 };
 
 struct EnemyTmp
 {
-    char *name;
+    char name[32];
     int hp;
+    int atk;
+    int def;
     struct EnemyTmp *next;
 };
 
 struct ItemTmp
 {
-    char *name;
+    char name[32];
     struct ItemTmp *next;
 };
 
 struct TagTmp
 {
-    char *tag;
+    char tag[16];
     struct TagTmp *next;
 };
 
 struct RoomTmp
 {
-    char *name;
-    char *desc;
+    char name[32];
+    char desc[32];
     int num_exits;
     int num_tags;
     struct ExitTmp *exits;
@@ -89,9 +91,9 @@ struct Dungeon *load_dungeon(char *filename)
             room_tmp->items = 0;
             room_tmp->tags = 0;
             // copy the name over
-            room_tmp->name = strdup(trim_wspace(line + 5));
+            strncpy(room_tmp->name, trim_wspace(line + 5), 32);
             // set an empty description
-            room_tmp->desc = "";
+            room_tmp->desc[0] = 0;
         }
         else if (strncmp(line, "EXIT ", 5) == 0)
         {
@@ -101,22 +103,22 @@ struct Dungeon *load_dungeon(char *filename)
             if (strncmp(line, "NORTH ", 6) == 0)
             {
                 dir = NORTH;
-                exit = strdup(trim_wspace(line + 6));
+                exit = trim_wspace(line + 6);
             }
             else if (strncmp(line, "SOUTH ", 6) == 0)
             {
                 dir = SOUTH;
-                exit = strdup(trim_wspace(line + 6));
+                exit = trim_wspace(line + 6);
             }
             else if (strncmp(line, "EAST ", 5) == 0)
             {
                 dir = EAST;
-                exit = strdup(trim_wspace(line + 5));
+                exit = trim_wspace(line + 5);
             }
             else if (strncmp(line, "WEST ", 5) == 0)
             {
                 dir = WEST;
-                exit = strdup(trim_wspace(line + 5));
+                exit = trim_wspace(line + 5);
             }
             else
             {
@@ -125,7 +127,7 @@ struct Dungeon *load_dungeon(char *filename)
             }
             struct ExitTmp *exit_tmp = malloc(sizeof(struct ExitTmp));
             exit_tmp->exit_dir = dir;
-            exit_tmp->exit_to = exit;
+            strncpy(exit_tmp->exit_to, exit, 32);
             exit_tmp->next = dungeon_tmp.rooms->exits;
             dungeon_tmp.rooms->exits = exit_tmp;
             dungeon_tmp.rooms->num_exits++;
@@ -134,40 +136,61 @@ struct Dungeon *load_dungeon(char *filename)
         {
             struct ItemTmp *item_tmp = malloc(sizeof(struct ItemTmp));
             // copy the item name
-            item_tmp->name = strdup(trim_wspace(line + 5));
+            strncpy(item_tmp->name, trim_wspace(line + 5), 32);
             // hook up to the linked list
             item_tmp->next = dungeon_tmp.rooms->items;
             dungeon_tmp.rooms->items = item_tmp;
         }
         else if (strncmp(line, "ENEMY ", 6) == 0)
         {
-            struct EnemyTmp *enemy_tmp = malloc(sizeof(struct EnemyTmp));
+            current_enemy =
+                malloc(sizeof(struct EnemyTmp));
             // copy the enemy name
-            enemy_tmp->name = strdup(trim_wspace(line + 6));
+            strncpy(current_enemy->name, trim_wspace(line + 6), 32);
             // hook up to the linked list
-            enemy_tmp->next = dungeon_tmp.rooms->enemies;
-            dungeon_tmp.rooms->enemies = enemy_tmp;
-            current_enemy = enemy_tmp;
+            current_enemy->next = dungeon_tmp.rooms->enemies;
+            dungeon_tmp.rooms->enemies = current_enemy;
+            current_enemy->hp = 1;
+            current_enemy->atk = 1;
+            current_enemy->def = 0;
         }
         else if (strncmp(line, "HP ", 3) == 0)
         {
             int hp = -1;
-            sscanf(trim_wspace(line + 3), "%i", &hp);
+            sscanf(trim_wspace(line + 3), "%u", &hp);
             if (hp != -1)
             {
                 current_enemy->hp = hp;
             }
         }
+        else if (strncmp(line, "ATK ", 4) == 0)
+        {
+            int atk = -1;
+            sscanf(trim_wspace(line + 4), "%u", &atk);
+            if (atk != -1)
+            {
+                current_enemy->atk = atk;
+            }
+        }
+        else if (strncmp(line, "DEF ", 4) == 0)
+        {
+            int def = -1;
+            sscanf(trim_wspace(line + 4), "%u", &def);
+            if (def != -1)
+            {
+                current_enemy->def = def;
+            }
+        }
         else if (strncmp(line, "DESC ", 5) == 0)
         {
             // add a description to the current room
-            dungeon_tmp.rooms->desc = strdup(trim_wspace(line + 5));
+            strncpy(dungeon_tmp.rooms->desc, trim_wspace(line + 5), 32);
         }
         else if (strncmp(line, "TAG ", 4) == 0)
         {
             struct TagTmp *tag_tmp = malloc(sizeof(struct TagTmp));
             // copy the tag name
-            tag_tmp->tag = strdup(trim_wspace(line + 4));
+            strncpy(tag_tmp->tag, trim_wspace(line + 4), 16);
             // hook up to the linked list
             tag_tmp->next = dungeon_tmp.rooms->tags;
             dungeon_tmp.rooms->tags = tag_tmp;
@@ -188,14 +211,16 @@ struct Dungeon *load_dungeon(char *filename)
         room->enemies = 0;
         room->items = 0;
         // move over the name and description
-        room->name = room_tmp->name;
-        room->desc = room_tmp->desc;
+        strncpy(room->name, room_tmp->name, 32);
+        strncpy(room->desc, room_tmp->desc, 32);
         // move over the enemies
         for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
         {
             struct Enemy *enemy = malloc(sizeof(struct Enemy));
-            enemy->name = enemy_tmp->name;
-            enemy->hp = enemy_tmp->hp;
+            strncpy(enemy->stats.name, enemy_tmp->name, 32);
+            enemy->stats.hp = enemy_tmp->hp;
+            enemy->stats.atk = enemy_tmp->atk;
+            enemy->stats.def = enemy_tmp->def;
             enemy->next = room->enemies;
             room->enemies = enemy;
         }
@@ -229,7 +254,7 @@ struct Dungeon *load_dungeon(char *filename)
         for (struct ItemTmp *item_tmp = room_tmp->items; item_tmp != 0; item_tmp = item_tmp->next)
         {
             struct Item *item = malloc(sizeof(struct Item));
-            item->name = item_tmp->name;
+            strncpy(item->name, item_tmp->name, 32);
             item->next = room->items;
             room->items = item;
         }
@@ -250,7 +275,6 @@ struct Dungeon *load_dungeon(char *filename)
         for (struct ExitTmp *exit = room->exits; exit != 0;)
         {
             struct ExitTmp *nxt = exit->next;
-            free(exit->exit_to);
             free(exit);
             exit = nxt;
         }
@@ -295,7 +319,7 @@ void print_dungeon_tmp(struct DungeonTmp dungeon)
         }
         for (struct EnemyTmp *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
-            printf(" ENEMY %s\n  HP %u\n", enemy->name, enemy->hp);
+            printf(" ENEMY %s\n  HP %u\n  ATK %u\n  DEF %u\n", enemy->name, enemy->hp, enemy->atk, enemy->def);
         }
         for (struct ItemTmp *item = room->items; item != 0; item = item->next)
         {
@@ -324,7 +348,7 @@ void print_dungeon(struct Dungeon *dungeon)
         }
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
-            printf(" ENEMY %s\n", enemy->name);
+            printf(" ENEMY %s\n\n  HP %u\n  ATK %u\n  DEF %u\n", enemy->stats.name, enemy->stats.hp, enemy->stats.atk, enemy->stats.def);
         }
         for (struct Item *item = room->items; item != 0; item = item->next)
         {
