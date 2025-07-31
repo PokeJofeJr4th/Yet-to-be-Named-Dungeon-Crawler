@@ -3,11 +3,13 @@ ROOM Entrance Hall
  TAG   START
  ITEM  Rusty Sword
  ENEMY Goblin Scout
+  HP   2
  EXIT  NORTH Great Hall
 
 ROOM Great Hall
  DESC  A vast hall with a broken chandelier.
  ENEMY Orc Brute
+  HP   4
  EXIT  SOUTH Entrance Hall
  EXIT  EAST  Armory
 

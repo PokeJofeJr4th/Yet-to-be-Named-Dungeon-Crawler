@@ -1,4 +1,4 @@
-typedef enum Direction
+enum Direction
 {
     NORTH,
     SOUTH,
@@ -6,29 +6,30 @@ typedef enum Direction
     WEST
 };
 
-typedef struct Enemy
+struct Enemy
 {
     char *name;
+    int hp;
+    struct Enemy *next;
 };
 
-typedef struct Item
+struct Item
 {
     char *name;
+    struct Item *next;
 };
 
-typedef struct Exit
+struct Exit
 {
     int room;
     enum Direction dir;
 };
 
-typedef struct Room
+struct Room
 {
     char *name;
     char *desc;
     int num_exits;
-    int num_enemies;
-    int num_items;
     int num_tags;
     struct Enemy *enemies;
     struct Item *items;
@@ -36,11 +37,12 @@ typedef struct Room
     char **tags;
 };
 
-typedef struct Dungeon
+struct Dungeon
 {
     int num_rooms;
     struct Room rooms[];
 };
 
 char *fmt_dir(enum Direction);
+char *trim_wspace(char *);
 struct Dungeon *load_dungeon(char *);

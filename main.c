@@ -9,12 +9,13 @@ void read_input(char *buffer)
     fgets(buffer, 128, stdin);
     for (int i = strlen(buffer) - 1; i > 0 && isspace(buffer[i]); buffer[i--] = '\0')
         ;
-    printf("%s\n", buffer);
+    // printf("%s\n", buffer);
 }
 
 int main()
 {
     struct Dungeon *dungeon = load_dungeon("example.txt");
+    struct Item *inventory = 0;
     struct Room *room = 0;
     for (int i = 0; i < dungeon->num_rooms; i++)
     {
@@ -34,20 +35,20 @@ int main()
     while (1)
     {
         printf("%s\n %s\n", room->name, room->desc);
-        if (room->num_enemies != 0)
+        if (room->enemies != 0)
         {
             printf("Enemies:\n");
-            for (int i = 0; i < room->num_enemies; i++)
+            for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
             {
-                printf(" %s\n", room->enemies[i].name);
+                printf(" %s (%u HP)\n", enemy->name, enemy->hp);
             }
         }
-        if (room->num_items != 0)
+        if (room->items != 0)
         {
             printf("Items:\n");
-            for (int i = 0; i < room->num_items; i++)
+            for (struct Item *item = room->items; item != 0; item = item->next)
             {
-                printf(" %s\n", room->items[i].name);
+                printf(" %s\n", item->name);
             }
         }
         if (room->num_exits != 0)
@@ -56,6 +57,14 @@ int main()
             for (int i = 0; i < room->num_exits; i++)
             {
                 printf(" %s: %s\n", fmt_dir(room->exits[i].dir), dungeon->rooms[room->exits[i].room].name);
+            }
+        }
+        if (inventory != 0)
+        {
+            printf("Inventory:\n");
+            for (struct Item *item = inventory; item != 0; item = item->next)
+            {
+                printf(" %s\n", item->name);
             }
         }
         read_input(cmd_buffer);
@@ -101,6 +110,33 @@ int main()
             {
                 room = &dungeon->rooms[new_room];
             }
+        }
+        else if (strncmp(cmd_buffer, "take ", 5) == 0)
+        {
+            char *item_name = trim_wspace(cmd_buffer + 5);
+            struct Item *prev = 0;
+            for (struct Item *item = room->items; item != 0; item = item->next)
+            {
+                if (strcmp(item_name, item->name) == 0)
+                {
+                    if (prev == 0)
+                    {
+                        room->items = item->next;
+                    }
+                    else
+                    {
+                        prev->next = item->next;
+                    }
+                    item->next = inventory;
+                    inventory = item;
+                    break;
+                }
+                prev = item;
+            }
+        }
+        else if (strcmp(cmd_buffer, "q") == 0)
+        {
+            break;
         }
         else
         {
