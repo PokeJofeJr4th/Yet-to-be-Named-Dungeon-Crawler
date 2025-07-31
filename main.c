@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 void read_input(char *buffer)
 {
@@ -59,6 +60,12 @@ int main()
                 printf(" %s: %s\n", fmt_dir(room->exits[i].dir), dungeon->rooms[room->exits[i].room].name);
             }
         }
+        printf("\n");
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+        {
+            printf("%s attacks you, dealing %i damage!", enemy->stats.name, enemy->stats.atk);
+        }
+        printf("\n");
         if (inventory != 0)
         {
             printf("Inventory:\n");
@@ -155,6 +162,31 @@ int main()
                     break;
                 }
                 prev = item;
+            }
+        }
+        else if (strncmp(cmd_buffer, "fight ", 5) == 0)
+        {
+            char *enemy_name = trim_wspace(cmd_buffer + 5);
+            struct Enemy *prev = 0;
+            for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+            {
+                if (strcmp(enemy->stats.name, enemy_name) == 0)
+                {
+                    enemy->stats.hp--;
+                    printf("You attack %s, dealing %i damage!", enemy->stats.name, 1);
+                    if (enemy->stats.hp <= 0)
+                    {
+                        if (prev == 0)
+                        {
+                            room->enemies = enemy->next;
+                        }
+                        else
+                        {
+                            prev->next = enemy->next;
+                        }
+                        free(enemy);
+                    }
+                }
             }
         }
         else if (strcmp(cmd_buffer, "q") == 0)
