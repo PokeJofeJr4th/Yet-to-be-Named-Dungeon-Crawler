@@ -1,10 +1,11 @@
 enum Direction
 {
-    NORTH,
-    SOUTH,
-    EAST,
-    WEST
+    DIR_NORTH,
+    DIR_SOUTH,
+    DIR_EAST,
+    DIR_WEST
 };
+
 struct Combatant
 {
     char name[32];
@@ -19,10 +20,24 @@ struct Enemy
     struct Enemy *next;
 };
 
+enum ItemType
+{
+    IT_DEFAULT,
+    IT_WEAPON,
+    IT_ARMOR_HEAD,
+    IT_ARMOR_CHEST,
+    IT_ARMOR_LEGS,
+    IT_ARMOR_FEET,
+    IT_SHIELD,
+};
+
 struct Item
 {
     char name[32];
     struct Item *next;
+    int atk;
+    int def;
+    enum ItemType type;
 };
 
 struct Exit
@@ -47,6 +62,19 @@ struct Dungeon
 {
     int num_rooms;
     struct Room rooms[];
+};
+
+struct Player
+{
+    struct Combatant stats;
+    struct Item *inventory;
+    // these fields are all optional. If the item name is empty, there's no item.
+    struct Item head;
+    struct Item body;
+    struct Item legs;
+    struct Item feet;
+    struct Item weapon;
+    struct Item shield;
 };
 
 char *fmt_dir(enum Direction);

@@ -24,6 +24,9 @@ struct ItemTmp
 {
     char name[32];
     struct ItemTmp *next;
+    int atk;
+    int def;
+    enum ItemType type;
 };
 
 struct TagTmp
@@ -68,6 +71,7 @@ struct Dungeon *load_dungeon(char *filename)
     char line_buffer[128];
     FILE *f = fopen(filename, "r");
     struct EnemyTmp *current_enemy = 0;
+    struct ItemTmp *current_item = 0;
 
     while (fgets(line_buffer, 128, f))
     {
@@ -77,6 +81,8 @@ struct Dungeon *load_dungeon(char *filename)
         if (strncmp(line, "ROOM ", 5) == 0)
         {
             // starting a new room
+            current_enemy = 0;
+            current_item = 0;
             num_rooms++;
             // allocate space for the new room
             struct RoomTmp *room_tmp = malloc(sizeof(struct RoomTmp));
@@ -97,27 +103,29 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "EXIT ", 5) == 0)
         {
+            current_enemy = 0;
+            current_item = 0;
             enum Direction dir;
             char *exit;
             line = trim_wspace(line + 5);
             if (strncmp(line, "NORTH ", 6) == 0)
             {
-                dir = NORTH;
+                dir = DIR_NORTH;
                 exit = trim_wspace(line + 6);
             }
             else if (strncmp(line, "SOUTH ", 6) == 0)
             {
-                dir = SOUTH;
+                dir = DIR_SOUTH;
                 exit = trim_wspace(line + 6);
             }
             else if (strncmp(line, "EAST ", 5) == 0)
             {
-                dir = EAST;
+                dir = DIR_EAST;
                 exit = trim_wspace(line + 5);
             }
             else if (strncmp(line, "WEST ", 5) == 0)
             {
-                dir = WEST;
+                dir = DIR_WEST;
                 exit = trim_wspace(line + 5);
             }
             else
@@ -134,15 +142,46 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "ITEM ", 5) == 0)
         {
-            struct ItemTmp *item_tmp = malloc(sizeof(struct ItemTmp));
+            current_enemy = 0;
+            current_item = malloc(sizeof(struct ItemTmp));
             // copy the item name
-            strncpy(item_tmp->name, trim_wspace(line + 5), 32);
+            strncpy(current_item->name, trim_wspace(line + 5), 32);
             // hook up to the linked list
-            item_tmp->next = dungeon_tmp.rooms->items;
-            dungeon_tmp.rooms->items = item_tmp;
+            current_item->next = dungeon_tmp.rooms->items;
+            current_item->atk = 0;
+            current_item->def = 0;
+            current_item->type = IT_DEFAULT;
+            dungeon_tmp.rooms->items = current_item;
+        }
+        else if (strncmp(line, "EQUIP ", 6) == 0)
+        {
+            line = trim_wspace(line + 6);
+            if (current_item == 0)
+            {
+                printf("ERROR: Attempt to use EQUIP without an item.\n");
+                continue;
+            }
+            if (strcmp(line, "HEAD") == 0)
+                current_item->type = IT_ARMOR_HEAD;
+            else if (strcmp(line, "CHEST") == 0)
+                current_item->type = IT_ARMOR_CHEST;
+            else if (strcmp(line, "LEGS") == 0)
+                current_item->type = IT_ARMOR_LEGS;
+            else if (strcmp(line, "FEET") == 0)
+                current_item->type = IT_ARMOR_FEET;
+            else if (strcmp(line, "WEAPON") == 0)
+                current_item->type = IT_WEAPON;
+            else if (strcmp(line, "SHIELD") == 0)
+                current_item->type = IT_SHIELD;
+            else
+            {
+                printf("ERROR: Invalid equip type: `%s`\n", line);
+                continue;
+            }
         }
         else if (strncmp(line, "ENEMY ", 6) == 0)
         {
+            current_item = 0;
             current_enemy =
                 malloc(sizeof(struct EnemyTmp));
             // copy the enemy name
@@ -157,29 +196,44 @@ struct Dungeon *load_dungeon(char *filename)
         else if (strncmp(line, "HP ", 3) == 0)
         {
             int hp = -1;
-            sscanf(trim_wspace(line + 3), "%u", &hp);
-            if (hp != -1)
+            line = trim_wspace(line + 3);
+            sscanf(line, "%u", &hp);
+            if (hp == -1)
             {
-                current_enemy->hp = hp;
+                printf("ERROR: Could not parse hp: `%s`\n", line);
+                continue;
             }
+            current_enemy->hp = hp;
         }
         else if (strncmp(line, "ATK ", 4) == 0)
         {
             int atk = -1;
-            sscanf(trim_wspace(line + 4), "%u", &atk);
-            if (atk != -1)
+            line = trim_wspace(line + 4);
+            sscanf(line, "%u", &atk);
+            if (atk == -1)
             {
-                current_enemy->atk = atk;
+                printf("ERROR: Could not parse atk: `%s`\n", line);
+                continue;
             }
+            if (current_enemy != 0)
+                current_enemy->atk = atk;
+            else if (current_item != 0)
+                current_item->atk = atk;
         }
         else if (strncmp(line, "DEF ", 4) == 0)
         {
             int def = -1;
-            sscanf(trim_wspace(line + 4), "%u", &def);
-            if (def != -1)
+            line = trim_wspace(line + 4);
+            sscanf(line, "%u", &def);
+            if (def == -1)
             {
-                current_enemy->def = def;
+                printf("ERROR: Could not parse def: `%s`\n", line);
+                continue;
             }
+            if (current_enemy != 0)
+                current_enemy->def = def;
+            else if (current_item != 0)
+                current_item->def = def;
         }
         else if (strncmp(line, "DESC ", 5) == 0)
         {
@@ -195,6 +249,10 @@ struct Dungeon *load_dungeon(char *filename)
             tag_tmp->next = dungeon_tmp.rooms->tags;
             dungeon_tmp.rooms->tags = tag_tmp;
             dungeon_tmp.rooms->num_tags++;
+        }
+        else if (*line != 0)
+        {
+            printf("ERROR: Could not parse: `%s`\n", line);
         }
         // ignore empty/invalid lines (?)
     }
@@ -245,9 +303,7 @@ struct Dungeon *load_dungeon(char *filename)
                 i++;
             }
             if (exit->room == -1)
-            {
-                printf("Can't find room %s\n", exit_tmp->exit_to);
-            }
+                printf("ERROR: Can't find room %s (linking exits for %s)\n", exit_tmp->exit_to, room_tmp->name);
             exit++;
         }
         // move over the items
@@ -255,6 +311,9 @@ struct Dungeon *load_dungeon(char *filename)
         {
             struct Item *item = malloc(sizeof(struct Item));
             strncpy(item->name, item_tmp->name, 32);
+            item->atk = item_tmp->atk;
+            item->def = item_tmp->def;
+            item->type = item_tmp->type;
             item->next = room->items;
             room->items = item;
         }
@@ -264,7 +323,7 @@ struct Dungeon *load_dungeon(char *filename)
         char **tag = room->tags;
         for (struct TagTmp *tag_tmp = room_tmp->tags; tag_tmp != 0; tag_tmp = tag_tmp->next)
         {
-            *tag = tag_tmp->tag;
+            *tag = strdup(tag_tmp->tag);
             tag++;
         }
         // go to the next room in the array
@@ -310,25 +369,15 @@ void print_dungeon_tmp(struct DungeonTmp dungeon)
     {
         printf("\nROOM %s\n", room->name);
         if (*room->desc)
-        {
             printf(" DESC %s\n", room->desc);
-        }
         for (struct TagTmp *tag = room->tags; tag != 0; tag = tag->next)
-        {
             printf(" TAG %s\n", tag->tag);
-        }
         for (struct EnemyTmp *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-        {
             printf(" ENEMY %s\n  HP %u\n  ATK %u\n  DEF %u\n", enemy->name, enemy->hp, enemy->atk, enemy->def);
-        }
         for (struct ItemTmp *item = room->items; item != 0; item = item->next)
-        {
             printf(" ITEM %s\n", item->name);
-        }
         for (struct ExitTmp *exit = room->exits; exit != 0; exit = exit->next)
-        {
             printf(" EXIT %s %s\n", fmt_dir(exit->exit_dir), exit->exit_to);
-        }
     }
 }
 
@@ -339,42 +388,17 @@ void print_dungeon(struct Dungeon *dungeon)
         struct Room *room = &dungeon->rooms[room_id];
         printf("\nROOM %s\n", room->name);
         if (*room->desc)
-        {
             printf(" DESC %s\n", room->desc);
-        }
         for (int tag_id = 0; tag_id < room->num_tags; tag_id++)
-        {
             printf(" TAG %s\n", room->tags[tag_id]);
-        }
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-        {
             printf(" ENEMY %s\n\n  HP %u\n  ATK %u\n  DEF %u\n", enemy->stats.name, enemy->stats.hp, enemy->stats.atk, enemy->stats.def);
-        }
         for (struct Item *item = room->items; item != 0; item = item->next)
-        {
             printf(" ITEM %s\n", item->name);
-        }
         for (int exit_id = 0; exit_id < room->num_exits; exit_id++)
         {
             struct Exit *exit = &room->exits[exit_id];
             printf(" EXIT %s %s\n", fmt_dir(exit->dir), dungeon->rooms[exit->room].name);
         }
-    }
-}
-
-char *fmt_dir(enum Direction dir)
-{
-    switch (dir)
-    {
-    case NORTH:
-        return "NORTH";
-    case SOUTH:
-        return "SOUTH";
-    case EAST:
-        return "EAST";
-    case WEST:
-        return "WEST";
-    default:
-        return "ERROR";
     }
 }

@@ -1,10 +1,15 @@
 ROOM Entrance Hall
- DESC  A cold stone chamber with dripping moss.
- TAG   START
- ITEM  Rusty Sword
- ENEMY Goblin Scout
-  HP   2
- EXIT  NORTH Great Hall
+ DESC   A cold stone chamber with dripping moss.
+ TAG    START
+ ITEM   Rusty Sword
+  EQUIP WEAPON
+  ATK   2
+ ITEM   Bronze Chestplate
+  EQUIP CHEST
+  DEF   1
+ ENEMY  Goblin Scout
+  HP    2
+ EXIT   NORTH Great Hall
 
 ROOM Great Hall
  DESC  A vast hall with a broken chandelier.
