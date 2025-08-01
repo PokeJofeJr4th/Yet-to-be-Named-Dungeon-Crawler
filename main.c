@@ -14,6 +14,13 @@ void read_input(char *buffer)
     // printf("%s\n", buffer);
 }
 
+void confirm()
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+}
+
 void init_player(struct Player *p)
 {
     p->stats.atk = 1;
@@ -21,12 +28,71 @@ void init_player(struct Player *p)
     p->stats.def = 0;
     strcpy(p->stats.name, "You");
     p->head.name[0] = 0;
-    p->body.name[0] = 0;
+    p->chest.name[0] = 0;
     p->legs.name[0] = 0;
     p->feet.name[0] = 0;
     p->weapon.name[0] = 0;
     p->shield.name[0] = 0;
     p->inventory = 0;
+}
+
+void update_stats(struct Player *p)
+{
+    p->stats.atk = 1;
+    p->stats.def = 0;
+    if (p->head.name[0])
+    {
+        p->stats.atk += p->head.atk;
+        p->stats.def += p->head.def;
+    }
+    if (p->chest.name[0])
+    {
+        p->stats.atk += p->chest.atk;
+        p->stats.def += p->chest.def;
+    }
+    if (p->legs.name[0])
+    {
+        p->stats.atk += p->legs.atk;
+        p->stats.def += p->legs.def;
+    }
+    if (p->feet.name[0])
+    {
+        p->stats.atk += p->feet.atk;
+        p->stats.def += p->feet.def;
+    }
+    if (p->weapon.name[0])
+    {
+        p->stats.atk += p->weapon.atk;
+        p->stats.def += p->weapon.def;
+    }
+    if (p->shield.name[0])
+    {
+        p->stats.atk += p->shield.atk;
+        p->stats.def += p->shield.def;
+    }
+}
+
+void print_room(struct Room *room, struct Dungeon *dungeon)
+{
+    printf("%s\n %s\n", room->name, room->desc);
+    if (room->enemies != 0)
+    {
+        printf("Enemies:\n");
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+            printf(" %s (%u HP, %u ATK, %u DEF)\n", enemy->stats.name, enemy->stats.hp, enemy->stats.atk, enemy->stats.def);
+    }
+    if (room->items != 0)
+    {
+        printf("Items:\n");
+        for (struct Item *item = room->items; item != 0; item = item->next)
+            printf(" %s\n", item->name);
+    }
+    if (room->num_exits != 0)
+    {
+        printf("Exits:\n");
+        for (int i = 0; i < room->num_exits; i++)
+            printf(" %s: %s\n", fmt_dir(room->exits[i].dir), dungeon->rooms[room->exits[i].room].name);
+    }
 }
 
 int main()
@@ -50,48 +116,13 @@ int main()
             break;
     }
     char cmd_buffer[128];
+    print_room(room, dungeon);
     while (1)
     {
-        printf("%s\n %s\n", room->name, room->desc);
-        if (room->enemies != 0)
-        {
-            printf("Enemies:\n");
-            for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-                printf(" %s (%u HP, %u ATK, %u DEF)\n", enemy->stats.name, enemy->stats.hp, enemy->stats.atk, enemy->stats.def);
-        }
-        if (room->items != 0)
-        {
-            printf("Items:\n");
-            for (struct Item *item = room->items; item != 0; item = item->next)
-                printf(" %s\n", item->name);
-        }
-        if (room->num_exits != 0)
-        {
-            printf("Exits:\n");
-            for (int i = 0; i < room->num_exits; i++)
-                printf(" %s: %s\n", fmt_dir(room->exits[i].dir), dungeon->rooms[room->exits[i].room].name);
-        }
-        printf("\n");
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-            fight(&enemy->stats, &player.stats);
-        printf("\n");
-        if (player.head.name[0])
-            printf("Head:\n %s\n", player.head.name);
-        if (player.body.name[0])
-            printf("Chest:\n %s\n", player.body.name);
-        if (player.legs.name[0])
-            printf("Legs:\n %s\n", player.legs.name);
-        if (player.feet.name[0])
-            printf("Feet:\n %s\n", player.feet.name);
-        if (player.weapon.name[0])
-            printf("Weapon:\n %s\n", player.weapon.name);
-        if (player.shield.name[0])
-            printf("Shield:\n %s\n", player.shield.name);
-        if (player.inventory)
         {
-            printf("Inventory:\n");
-            for (struct Item *item = player.inventory; item != 0; item = item->next)
-                printf(" %s\n", item->name);
+            fight(&enemy->stats, &player.stats);
+            confirm();
         }
         read_input(cmd_buffer);
         if (strncmp(cmd_buffer, "move ", 5) == 0)
@@ -107,7 +138,8 @@ int main()
                 dir = DIR_WEST;
             else
             {
-                printf("Unknown direction\n");
+                printf("Unknown direction: `%s`\n", cmd_buffer + 5);
+                confirm();
                 continue;
             }
             int new_room = -1;
@@ -121,7 +153,11 @@ int main()
                 }
             }
             if (new_room == -1)
-                printf("Invalid exit\n");
+            {
+                printf("No exit %s", fmt_dir(dir));
+                confirm();
+                continue;
+            }
             else
                 room = &dungeon->rooms[new_room];
         }
@@ -167,6 +203,7 @@ int main()
         {
             char *item_name = trim_wspace(cmd_buffer + 6);
             struct Item *prev = 0;
+            int found_item = 0;
             for (struct Item *item = player.inventory; item != 0; item = item->next)
             {
                 if (strcmp(item_name, item->name) == 0)
@@ -179,7 +216,7 @@ int main()
                         slot = &player.head;
                         break;
                     case IT_ARMOR_CHEST:
-                        slot = &player.body;
+                        slot = &player.chest;
                         break;
                     case IT_ARMOR_LEGS:
                         slot = &player.legs;
@@ -217,20 +254,33 @@ int main()
                             prev->next = item->next;
                         free(item);
                     }
+                    found_item = 1;
                     break;
                 }
                 prev = item;
+            }
+            if (found_item)
+            {
+                update_stats(&player);
+            }
+            else
+            {
+                printf("Failed to find item: `%s`\n", item_name);
+                continue;
             }
         }
         else if (strncmp(cmd_buffer, "fight ", 5) == 0)
         {
             char *enemy_name = trim_wspace(cmd_buffer + 5);
             struct Enemy *prev = 0;
+            int found = 0;
             for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
             {
                 if (strcmp(enemy->stats.name, enemy_name) == 0)
                 {
                     fight(&player.stats, &enemy->stats);
+                    found = 1;
+                    confirm();
                     if (enemy->stats.hp <= 0)
                     {
                         if (prev == 0)
@@ -241,11 +291,43 @@ int main()
                     }
                 }
             }
+            if (!found)
+            {
+                printf("No such enemy: `%s`", enemy_name);
+                continue;
+            }
+        }
+        else if (strcmp(cmd_buffer, "inv") == 0 || strcmp(cmd_buffer, "inventory") == 0)
+        {
+            printf("\n");
+            if (player.head.name[0])
+                printf("Head:\n %s\n", player.head.name);
+            if (player.chest.name[0])
+                printf("Chest:\n %s\n", player.chest.name);
+            if (player.legs.name[0])
+                printf("Legs:\n %s\n", player.legs.name);
+            if (player.feet.name[0])
+                printf("Feet:\n %s\n", player.feet.name);
+            if (player.weapon.name[0])
+                printf("Weapon:\n %s\n", player.weapon.name);
+            if (player.shield.name[0])
+                printf("Shield:\n %s\n", player.shield.name);
+            if (player.inventory)
+            {
+                printf("Inventory:\n");
+                for (struct Item *item = player.inventory; item != 0; item = item->next)
+                    printf(" %s\n", item->name);
+            }
+            continue;
         }
         else if (strcmp(cmd_buffer, "q") == 0)
             break;
         else
+        {
             printf("Unknown command\n");
+            continue;
+        }
+        print_room(room, dungeon);
     }
 }
 

@@ -70,7 +70,7 @@ struct Player
     struct Item *inventory;
     // these fields are all optional. If the item name is empty, there's no item.
     struct Item head;
-    struct Item body;
+    struct Item chest;
     struct Item legs;
     struct Item feet;
     struct Item weapon;

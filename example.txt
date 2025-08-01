@@ -19,8 +19,72 @@ ROOM Great Hall
   DEF  1
  EXIT  SOUTH Entrance Hall
  EXIT  EAST  Armory
+ EXIT  NORTH Chapel
 
 ROOM Armory
  DESC Shelves lined with dust and old weapons.
- ITEM Healing Potion
+ ITEM Iron Greaves
+  EQUIP LEGS
+  DEF   1
+ ITEM Heater Shield
+  EQUIP SHIELD
+  DEF   2
  EXIT WEST Great Hall
+
+ROOM Chapel
+ DESC A quiet place, scorched by dark rituals.
+ ITEM Healing Potion
+ ITEM Silver Circlet
+  EQUIP HEAD
+  DEF   1
+ ENEMY Cult Acolyte
+  HP    3
+  ATK   1
+  DEF   1
+ EXIT SOUTH Great Hall
+ EXIT EAST  Crypt
+
+ROOM Crypt
+ DESC Cracked stone coffins and stale air.
+ ITEM Bone Wand
+  EQUIP WEAPON
+  ATK   1
+ ITEM Tattered Robes
+  EQUIP CHEST
+  DEF   1
+ ENEMY Skeleton
+  HP    3
+  ATK   1
+ EXIT WEST Chapel
+
+ROOM Kitchen
+ DESC Rotten food and shattered dishes cover the floor.
+ ITEM Iron Boots
+  EQUIP FEET
+  DEF   1
+ ENEMY Rat Swarm
+  HP    2
+  ATK   1
+ EXIT WEST Great Hall
+
+ROOM Barracks
+ DESC Broken beds and bloodstains mark old conflict.
+ ITEM Chainmail Pants
+  EQUIP LEGS
+  DEF   2
+ ITEM Tower Shield
+  EQUIP SHIELD
+  DEF   3
+ ENEMY Goblin Captain
+  HP    5
+  ATK   3
+  DEF   1
+ EXIT NORTH Armory
+
+ROOM Hidden Niche
+ DESC A secret alcove behind a loose stone.
+ ITEM Elixir of Might
+ ITEM Gold-Plated Helm
+  EQUIP HEAD
+  DEF   2
+ EXIT EAST Crypt
