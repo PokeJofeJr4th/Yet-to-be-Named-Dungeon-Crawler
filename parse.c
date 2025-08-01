@@ -78,7 +78,7 @@ struct Dungeon *load_dungeon(char *filename)
         for (int i = strlen(line_buffer) - 1; i > 0 && isspace(line_buffer[i]); line_buffer[i--] = '\0')
             ;
         char *line = trim_wspace(line_buffer);
-        if (strncmp(line, "ROOM ", 5) == 0)
+        if (strnicmp(line, "ROOM ", 5) == 0)
         {
             // starting a new room
             current_enemy = 0;
@@ -101,29 +101,29 @@ struct Dungeon *load_dungeon(char *filename)
             // set an empty description
             room_tmp->desc[0] = 0;
         }
-        else if (strncmp(line, "EXIT ", 5) == 0)
+        else if (strnicmp(line, "EXIT ", 5) == 0)
         {
             current_enemy = 0;
             current_item = 0;
             enum Direction dir;
             char *exit;
             line = trim_wspace(line + 5);
-            if (strncmp(line, "NORTH ", 6) == 0)
+            if (strnicmp(line, "NORTH ", 6) == 0)
             {
                 dir = DIR_NORTH;
                 exit = trim_wspace(line + 6);
             }
-            else if (strncmp(line, "SOUTH ", 6) == 0)
+            else if (strnicmp(line, "SOUTH ", 6) == 0)
             {
                 dir = DIR_SOUTH;
                 exit = trim_wspace(line + 6);
             }
-            else if (strncmp(line, "EAST ", 5) == 0)
+            else if (strnicmp(line, "EAST ", 5) == 0)
             {
                 dir = DIR_EAST;
                 exit = trim_wspace(line + 5);
             }
-            else if (strncmp(line, "WEST ", 5) == 0)
+            else if (strnicmp(line, "WEST ", 5) == 0)
             {
                 dir = DIR_WEST;
                 exit = trim_wspace(line + 5);
@@ -140,7 +140,7 @@ struct Dungeon *load_dungeon(char *filename)
             dungeon_tmp.rooms->exits = exit_tmp;
             dungeon_tmp.rooms->num_exits++;
         }
-        else if (strncmp(line, "ITEM ", 5) == 0)
+        else if (strnicmp(line, "ITEM ", 5) == 0)
         {
             current_enemy = 0;
             current_item = malloc(sizeof(struct ItemTmp));
@@ -153,7 +153,7 @@ struct Dungeon *load_dungeon(char *filename)
             current_item->type = IT_DEFAULT;
             dungeon_tmp.rooms->items = current_item;
         }
-        else if (strncmp(line, "EQUIP ", 6) == 0)
+        else if (strnicmp(line, "EQUIP ", 6) == 0)
         {
             line = trim_wspace(line + 6);
             if (current_item == 0)
@@ -161,17 +161,17 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to use EQUIP without an item.\n");
                 continue;
             }
-            if (strcmp(line, "HEAD") == 0)
+            if (stricmp(line, "HEAD") == 0)
                 current_item->type = IT_ARMOR_HEAD;
-            else if (strcmp(line, "CHEST") == 0)
+            else if (stricmp(line, "CHEST") == 0)
                 current_item->type = IT_ARMOR_CHEST;
-            else if (strcmp(line, "LEGS") == 0)
+            else if (stricmp(line, "LEGS") == 0)
                 current_item->type = IT_ARMOR_LEGS;
-            else if (strcmp(line, "FEET") == 0)
+            else if (stricmp(line, "FEET") == 0)
                 current_item->type = IT_ARMOR_FEET;
-            else if (strcmp(line, "WEAPON") == 0)
+            else if (stricmp(line, "WEAPON") == 0)
                 current_item->type = IT_WEAPON;
-            else if (strcmp(line, "SHIELD") == 0)
+            else if (stricmp(line, "SHIELD") == 0)
                 current_item->type = IT_SHIELD;
             else
             {
@@ -179,7 +179,7 @@ struct Dungeon *load_dungeon(char *filename)
                 continue;
             }
         }
-        else if (strncmp(line, "ENEMY ", 6) == 0)
+        else if (strnicmp(line, "ENEMY ", 6) == 0)
         {
             current_item = 0;
             current_enemy =
@@ -193,54 +193,58 @@ struct Dungeon *load_dungeon(char *filename)
             current_enemy->atk = 1;
             current_enemy->def = 0;
         }
-        else if (strncmp(line, "HP ", 3) == 0)
+        else if (strnicmp(line, "HP ", 3) == 0)
         {
             int hp = -1;
             line = trim_wspace(line + 3);
             sscanf(line, "%u", &hp);
             if (hp == -1)
             {
-                printf("ERROR: Could not parse hp: `%s`\n", line);
+                printf("ERROR: Could not parse HP: `%s`\n", line);
                 continue;
             }
             current_enemy->hp = hp;
         }
-        else if (strncmp(line, "ATK ", 4) == 0)
+        else if (strnicmp(line, "ATK ", 4) == 0)
         {
             int atk = -1;
             line = trim_wspace(line + 4);
             sscanf(line, "%u", &atk);
             if (atk == -1)
             {
-                printf("ERROR: Could not parse atk: `%s`\n", line);
+                printf("ERROR: Could not parse ATK: `%s`\n", line);
                 continue;
             }
             if (current_enemy != 0)
                 current_enemy->atk = atk;
             else if (current_item != 0)
                 current_item->atk = atk;
+            else
+                printf("ERROR: Attempt to add ATK without item or enemy.\n");
         }
-        else if (strncmp(line, "DEF ", 4) == 0)
+        else if (strnicmp(line, "DEF ", 4) == 0)
         {
             int def = -1;
             line = trim_wspace(line + 4);
             sscanf(line, "%u", &def);
             if (def == -1)
             {
-                printf("ERROR: Could not parse def: `%s`\n", line);
+                printf("ERROR: Could not parse DEF: `%s`\n", line);
                 continue;
             }
             if (current_enemy != 0)
                 current_enemy->def = def;
             else if (current_item != 0)
                 current_item->def = def;
+            else
+                printf("ERROR: Attempt to add DEF without item or enemy.\n");
         }
-        else if (strncmp(line, "DESC ", 5) == 0)
+        else if (strnicmp(line, "DESC ", 5) == 0)
         {
             // add a description to the current room
             strncpy(dungeon_tmp.rooms->desc, trim_wspace(line + 5), 128);
         }
-        else if (strncmp(line, "TAG ", 4) == 0)
+        else if (strnicmp(line, "TAG ", 4) == 0)
         {
             struct TagTmp *tag_tmp = malloc(sizeof(struct TagTmp));
             // copy the tag name
@@ -295,7 +299,7 @@ struct Dungeon *load_dungeon(char *filename)
             int i = 0;
             for (struct RoomTmp *room_candidate = dungeon_tmp.rooms; room_candidate != 0; room_candidate = room_candidate->next)
             {
-                if (strcmp(exit_tmp->exit_to, room_candidate->name) == 0)
+                if (stricmp(exit_tmp->exit_to, room_candidate->name) == 0)
                 {
                     exit->room = i;
                     break;

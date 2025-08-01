@@ -72,6 +72,46 @@ void update_stats(struct Player *p)
     }
 }
 
+char *fmt_item_type(enum ItemType it)
+{
+    switch (it)
+    {
+    case IT_ARMOR_HEAD:
+        return "head";
+    case IT_ARMOR_CHEST:
+        return "chest";
+    case IT_ARMOR_LEGS:
+        return "legs";
+    case IT_ARMOR_FEET:
+        return "feet";
+    case IT_WEAPON:
+        return "weapon";
+    case IT_SHIELD:
+        return "shield";
+    default:
+        return "?";
+    }
+}
+
+void print_item(struct Item *i)
+{
+    printf("%s", i->name);
+    if (i->type != IT_DEFAULT)
+    {
+        printf("(%s slot:", fmt_item_type(i->type));
+        if (i->atk != 0)
+        {
+            printf(" %+i ATK", i->atk);
+        }
+        if (i->def != 0)
+        {
+            printf(" %+i DEF", i->def);
+        }
+        printf(")");
+    }
+    printf("\n");
+}
+
 void print_room(struct Room *room, struct Dungeon *dungeon)
 {
     printf("%s\n %s\n", room->name, room->desc);
@@ -85,7 +125,10 @@ void print_room(struct Room *room, struct Dungeon *dungeon)
     {
         printf("Items:\n");
         for (struct Item *item = room->items; item != 0; item = item->next)
-            printf(" %s\n", item->name);
+        {
+            printf(" ");
+            print_item(item);
+        }
     }
     if (room->num_exits != 0)
     {
@@ -119,11 +162,6 @@ int main()
     print_room(room, dungeon);
     while (1)
     {
-        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-        {
-            fight(&enemy->stats, &player.stats);
-            confirm();
-        }
         read_input(cmd_buffer);
         if (strncmp(cmd_buffer, "move ", 5) == 0)
         {
@@ -301,23 +339,54 @@ int main()
         {
             printf("\n");
             if (player.head.name[0])
-                printf("Head:\n %s\n", player.head.name);
+            {
+                printf("HEAD:\n ");
+                print_item(&player.head);
+            }
             if (player.chest.name[0])
-                printf("Chest:\n %s\n", player.chest.name);
+            {
+                printf("CHEST:\n ");
+                print_item(&player.chest);
+            }
             if (player.legs.name[0])
-                printf("Legs:\n %s\n", player.legs.name);
+            {
+                printf("LEGS:\n ");
+                print_item(&player.legs);
+            }
             if (player.feet.name[0])
-                printf("Feet:\n %s\n", player.feet.name);
+            {
+                printf("FEET:\n ");
+                print_item(&player.feet);
+            }
             if (player.weapon.name[0])
-                printf("Weapon:\n %s\n", player.weapon.name);
+            {
+                printf("WEAPON:\n ");
+                print_item(&player.weapon);
+            }
             if (player.shield.name[0])
-                printf("Shield:\n %s\n", player.shield.name);
+            {
+                printf("SHIELD:\n ");
+                print_item(&player.shield);
+            }
             if (player.inventory)
             {
                 printf("Inventory:\n");
                 for (struct Item *item = player.inventory; item != 0; item = item->next)
-                    printf(" %s\n", item->name);
+                {
+                    printf(" ");
+                    print_item(item);
+                }
             }
+            continue;
+        }
+        else if (strcmp(cmd_buffer, "look") == 0)
+        {
+            print_room(room, dungeon);
+            continue;
+        }
+        else if (strcmp(cmd_buffer, "stats") == 0)
+        {
+            printf("%s\nHP: %i\nATK: %i\nDEF: %i", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def);
             continue;
         }
         else if (strcmp(cmd_buffer, "q") == 0)
@@ -326,6 +395,11 @@ int main()
         {
             printf("Unknown command\n");
             continue;
+        }
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+        {
+            fight(&enemy->stats, &player.stats);
+            confirm();
         }
         print_room(room, dungeon);
     }
@@ -336,13 +410,13 @@ char *fmt_dir(enum Direction dir)
     switch (dir)
     {
     case DIR_NORTH:
-        return "NORTH";
+        return "north";
     case DIR_SOUTH:
-        return "SOUTH";
+        return "south";
     case DIR_EAST:
-        return "EAST";
+        return "east";
     case DIR_WEST:
-        return "WEST";
+        return "west";
     default:
         return "ERROR";
     }
