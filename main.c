@@ -107,6 +107,10 @@ void print_item(struct Item *i)
         {
             printf(" %+i DEF", i->def);
         }
+        if (i->mana != 0)
+        {
+            printf(" %+i MANA", i->mana);
+        }
         printf(")");
     }
     printf("\n");
@@ -386,7 +390,7 @@ int main()
         }
         else if (strcmp(cmd_buffer, "stats") == 0)
         {
-            printf("%s\nHP: %i\nATK: %i\nDEF: %i", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def);
+            printf("%s\nHP: %i\nATK: %i\nDEF: %i\nMANA: %i", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def, player.stats.mana);
             continue;
         }
         else if (strcmp(cmd_buffer, "q") == 0)

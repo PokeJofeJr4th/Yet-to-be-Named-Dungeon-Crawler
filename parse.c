@@ -17,6 +17,7 @@ struct EnemyTmp
     int hp;
     int atk;
     int def;
+    int mana;
     struct EnemyTmp *next;
 };
 
@@ -26,6 +27,7 @@ struct ItemTmp
     struct ItemTmp *next;
     int atk;
     int def;
+    int mana;
     enum ItemType type;
 };
 
@@ -150,6 +152,7 @@ struct Dungeon *load_dungeon(char *filename)
             current_item->next = dungeon_tmp.rooms->items;
             current_item->atk = 0;
             current_item->def = 0;
+            current_item->mana = 0;
             current_item->type = IT_DEFAULT;
             dungeon_tmp.rooms->items = current_item;
         }
@@ -192,6 +195,7 @@ struct Dungeon *load_dungeon(char *filename)
             current_enemy->hp = 1;
             current_enemy->atk = 1;
             current_enemy->def = 0;
+            current_enemy->mana = 0;
         }
         else if (strnicmp(line, "HP ", 3) == 0)
         {
@@ -204,6 +208,23 @@ struct Dungeon *load_dungeon(char *filename)
                 continue;
             }
             current_enemy->hp = hp;
+        }
+        else if (strnicmp(line, "MANA ", 4) == 0)
+        {
+            int mana = -1;
+            line = trim_wspace(line + 4);
+            sscanf(line, "%u", &mana);
+            if (mana == -1)
+            {
+                printf("ERROR: Could not parse MANA: `%s`\n", line);
+                continue;
+            }
+            if (current_enemy != 0)
+                current_enemy->mana = mana;
+            else if (current_item != 0)
+                current_item->mana = mana;
+            else
+                printf("ERROR: Attempt to add MANA without item or enemy.\n");
         }
         else if (strnicmp(line, "ATK ", 4) == 0)
         {
@@ -283,6 +304,7 @@ struct Dungeon *load_dungeon(char *filename)
             enemy->stats.hp = enemy_tmp->hp;
             enemy->stats.atk = enemy_tmp->atk;
             enemy->stats.def = enemy_tmp->def;
+            enemy->stats.mana = enemy_tmp->mana;
             enemy->next = room->enemies;
             room->enemies = enemy;
         }
@@ -317,6 +339,7 @@ struct Dungeon *load_dungeon(char *filename)
             strncpy(item->name, item_tmp->name, 32);
             item->atk = item_tmp->atk;
             item->def = item_tmp->def;
+            item->mana = item_tmp->mana;
             item->type = item_tmp->type;
             item->next = room->items;
             room->items = item;

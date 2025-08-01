@@ -12,6 +12,7 @@ struct Combatant
     int hp;
     int atk;
     int def;
+    int mana;
 };
 
 struct Enemy
@@ -37,6 +38,7 @@ struct Item
     struct Item *next;
     int atk;
     int def;
+    int mana;
     enum ItemType type;
 };
 
