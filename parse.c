@@ -4,6 +4,31 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+struct SpellEffectTmp
+{
+    struct SpellEffectTmp *next;
+    int amount;
+    enum SpellEffectType type;
+};
+
+struct SpellTargetTmp
+{
+    struct SpellEffectTmp *effects;
+    struct SpellTargetTmp *next;
+    int num_effects;
+    enum SpellTargetType type;
+};
+
+struct SpellTmp
+{
+    char name[32];
+    struct TagTmp *tags;
+    struct SpellTargetTmp *targets;
+    struct SpellTmp *next;
+    int num_tags;
+    int num_targets;
+};
+
 struct ExitTmp
 {
     char exit_to[32];
@@ -53,6 +78,9 @@ struct RoomTmp
 struct DungeonTmp
 {
     struct RoomTmp *rooms;
+    struct SpellTmp *spells;
+    int num_rooms;
+    int num_spells;
 };
 
 void print_dungeon_tmp(struct DungeonTmp);
@@ -67,9 +95,13 @@ char *trim_wspace(char *p)
 
 struct Dungeon *load_dungeon(char *filename)
 {
-    struct DungeonTmp dungeon_tmp;
-    int num_rooms = 0;
-    dungeon_tmp.rooms = 0;
+    struct DungeonTmp dungeon_tmp =
+        {
+            .num_rooms = 0,
+            .rooms = 0,
+            .num_spells = 0,
+            .spells = 0,
+        };
     char line_buffer[128];
     FILE *f = fopen(filename, "r");
     struct EnemyTmp *current_enemy = 0;
@@ -85,7 +117,7 @@ struct Dungeon *load_dungeon(char *filename)
             // starting a new room
             current_enemy = 0;
             current_item = 0;
-            num_rooms++;
+            dungeon_tmp.num_rooms++;
             // allocate space for the new room
             struct RoomTmp *room_tmp = malloc(sizeof(struct RoomTmp));
             // hook it up to the linked list
@@ -284,8 +316,8 @@ struct Dungeon *load_dungeon(char *filename)
     fclose(f);
     // print_dungeon_tmp(dungeon_tmp);
     // allocate the dungeon with enough space to store all the rooms
-    struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * num_rooms);
-    dungeon->num_rooms = num_rooms;
+    struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * dungeon_tmp.num_rooms);
+    dungeon->num_rooms = dungeon_tmp.num_rooms;
     // loop through the rooms of the tmp and final dungeon in parallel
     struct Room *room = dungeon->rooms;
     for (struct RoomTmp *room_tmp = dungeon_tmp.rooms; room_tmp != 0; room_tmp = room_tmp->next)

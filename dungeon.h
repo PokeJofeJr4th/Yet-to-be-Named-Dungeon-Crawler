@@ -40,24 +40,23 @@ enum SpellEffectType
 struct SpellEffect
 {
     int amount;
-    int duration;
     enum SpellEffectType type;
 };
 
 struct SpellTarget
 {
-    enum SpellTargetType target;
-    int num_effects;
     struct SpellEffect *effects;
+    int num_effects;
+    enum SpellTargetType target;
 };
 
 struct Spell
 {
     char name[32];
-    int num_targets;
-    int num_tags;
     struct SpellTarget *targets;
     char **tags;
+    int num_targets;
+    int num_tags;
 };
 
 struct Enemy

@@ -1,13 +1,13 @@
 SPELL Firebolt
  TARGET ENEMY
   DMG 2
-  STATUS BURN 2
+  EFFECT BURN 2
  COST 1
  TAG FIRE
 
 SPELL Stoneskin
  TARGET SELF
-  BUFF DEF 2 3
+  EFFECT FORTIFY 3
  COST 1
  TAG EARTH
 
@@ -20,18 +20,17 @@ SPELL Magic Missile
 SPELL Venom Touch
  TARGET ENEMY
   DMG 1
-  DEBUFF ATK 1 2
-  STATUS POISON 3
+  EFFECT WEAK 2
+  EFFECT POISON 3
  COST 1
  TAG POISON
 
 SPELL Mass Restoration
  EACH ALLY
   HEAL 2
-  BUFF DEF 1 2
+  EFFECT FORTIFY 2
  COST 2
  TAG LIGHT
-
 
 ROOM Entrance Hall
  DESC   A cold stone chamber with dripping moss.
