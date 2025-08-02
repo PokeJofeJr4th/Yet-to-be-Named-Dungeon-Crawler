@@ -28,7 +28,6 @@ void fight(struct Combatant *attacker, struct Combatant *target)
     int def = target->def + target->fortify;
     int dmg = take_damage(target, atk - def);
     printf("%s attacks %s, dealing %i damage.\n", attacker->name, target->name, dmg);
-    target->hp -= dmg;
 }
 
 int sign(int x)

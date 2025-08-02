@@ -153,3 +153,4 @@ struct Dungeon *load_dungeon(char *);
 // Combat
 void fight(struct Combatant *attacker, struct Combatant *target);
 void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Combatant *caster);
+void tick(struct Combatant *c);

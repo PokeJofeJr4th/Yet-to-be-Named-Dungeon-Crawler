@@ -387,7 +387,7 @@ int main()
                     if (tmp.name[0])
                     {
                         struct SpellPage *prev = 0;
-                        for (struct SpellPage *p = 0; p != 0; p = p->next)
+                        for (struct SpellPage *p = player.spellbook; p != 0; p = p->next)
                         {
                             if (p->spell == tmp.grants)
                             {
@@ -545,6 +545,27 @@ int main()
             fight(&enemy->stats, &player.stats);
             confirm();
         }
+        struct Enemy *prev = 0;
+        for (struct Enemy *enemy = room->enemies; enemy != 0;)
+        {
+            tick(&enemy->stats);
+            if (enemy->stats.hp <= 0)
+            {
+                if (prev == 0)
+                {
+                    room->enemies = enemy->next;
+                }
+                else
+                {
+                    prev->next = enemy->next;
+                }
+                free(enemy);
+                enemy = prev->next;
+            }
+            else
+                enemy = enemy->next;
+        }
+        tick(&player.stats);
         print_room(room, dungeon);
     }
 }
