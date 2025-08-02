@@ -26,6 +26,7 @@ void init_player(struct Player *p)
     p->stats.atk = 1;
     p->stats.hp = 10;
     p->stats.def = 0;
+    p->stats.mana = 0;
     p->stats.burn = 0;
     p->stats.fortify = 0;
     p->stats.poison = 0;
@@ -46,6 +47,7 @@ void update_stats(struct Player *p)
 {
     p->stats.atk = 1;
     p->stats.def = 0;
+    p->stats.mana = 0;
     if (p->head.name[0])
     {
         p->stats.atk += p->head.atk;
@@ -112,7 +114,7 @@ void print_item(struct Item *i)
     printf("%s", i->name);
     if (i->type != IT_DEFAULT)
     {
-        printf("(%s:", fmt_item_type(i->type));
+        printf(" (%s:", fmt_item_type(i->type));
         if (i->atk != 0)
         {
             printf(" %+i ATK", i->atk);
@@ -124,6 +126,10 @@ void print_item(struct Item *i)
         if (i->mana != 0)
         {
             printf(" %+i MANA", i->mana);
+        }
+        if (i->grants != 0)
+        {
+            printf(" <%s>", i->grants->name);
         }
         printf(")");
     }
@@ -407,6 +413,10 @@ int main()
         {
             printf("%s\nHP: %i\nATK: %i\nDEF: %i\nMANA: %i\n", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def, player.stats.mana);
             continue;
+        }
+        else if (strncmp(cmd_buffer, "cast ", 5) == 0)
+        {
+            char *spell_name = trim_wspace(cmd_buffer + 5);
         }
         else if (strcmp(cmd_buffer, "q") == 0)
             break;
