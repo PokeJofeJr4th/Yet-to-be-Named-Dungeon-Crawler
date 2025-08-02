@@ -29,6 +29,7 @@ enum SpellEffectType
     SE_DMG,
     SE_HEAL,
     SE_RAGE,
+    SE_WEAK,
     SE_FORTIFY,
     SE_MANA,
     SE_BURN,
@@ -57,6 +58,7 @@ struct Spell
     char **tags;
     int num_targets;
     int num_tags;
+    int cost;
 };
 
 struct Enemy

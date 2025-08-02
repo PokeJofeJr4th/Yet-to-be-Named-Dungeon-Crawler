@@ -27,6 +27,7 @@ struct SpellTmp
     struct SpellTmp *next;
     int num_tags;
     int num_targets;
+    int cost;
 };
 
 struct ExitTmp
@@ -106,6 +107,9 @@ struct Dungeon *load_dungeon(char *filename)
     FILE *f = fopen(filename, "r");
     struct EnemyTmp *current_enemy = 0;
     struct ItemTmp *current_item = 0;
+    struct SpellTmp *current_spell = 0;
+    struct SpellTargetTmp *current_spell_target = 0;
+    struct RoomTmp *current_room = 0;
 
     while (fgets(line_buffer, 128, f))
     {
@@ -117,31 +121,37 @@ struct Dungeon *load_dungeon(char *filename)
             // starting a new room
             current_enemy = 0;
             current_item = 0;
+            current_spell = 0;
+            current_spell_target = 0;
             dungeon_tmp.num_rooms++;
             // allocate space for the new room
-            struct RoomTmp *room_tmp = malloc(sizeof(struct RoomTmp));
+            current_room = malloc(sizeof(struct RoomTmp));
             // hook it up to the linked list
-            room_tmp->next = dungeon_tmp.rooms;
-            dungeon_tmp.rooms = room_tmp;
+            current_room->next = dungeon_tmp.rooms;
+            dungeon_tmp.rooms = current_room;
             // initialize all the other fields
-            room_tmp->num_exits = 0;
-            room_tmp->num_tags = 0;
-            room_tmp->enemies = 0;
-            room_tmp->exits = 0;
-            room_tmp->items = 0;
-            room_tmp->tags = 0;
+            current_room->num_exits = 0;
+            current_room->num_tags = 0;
+            current_room->enemies = 0;
+            current_room->exits = 0;
+            current_room->items = 0;
+            current_room->tags = 0;
             // copy the name over
-            strncpy(room_tmp->name, trim_wspace(line + 5), 32);
+            strncpy(current_room->name, trim_wspace(line + 5), 32);
             // set an empty description
-            room_tmp->desc[0] = 0;
+            current_room->desc[0] = 0;
         }
         else if (strnicmp(line, "EXIT ", 5) == 0)
         {
+            line = trim_wspace(line + 5);
+            if (current_room == 0)
+            {
+                printf("ERROR: Attempt to add an exit without a room: `%s`\n", line);
+            }
             current_enemy = 0;
             current_item = 0;
             enum Direction dir;
             char *exit;
-            line = trim_wspace(line + 5);
             if (strnicmp(line, "NORTH ", 6) == 0)
             {
                 dir = DIR_NORTH;
@@ -164,15 +174,15 @@ struct Dungeon *load_dungeon(char *filename)
             }
             else
             {
-                // TODO: error that you're trying to go in an invalid direction
+                printf("ERROR: Invalid direction: `%s`\n", line);
                 continue;
             }
             struct ExitTmp *exit_tmp = malloc(sizeof(struct ExitTmp));
             exit_tmp->exit_dir = dir;
             strncpy(exit_tmp->exit_to, exit, 32);
-            exit_tmp->next = dungeon_tmp.rooms->exits;
-            dungeon_tmp.rooms->exits = exit_tmp;
-            dungeon_tmp.rooms->num_exits++;
+            exit_tmp->next = current_room->exits;
+            current_room->exits = exit_tmp;
+            current_room->num_exits++;
         }
         else if (strnicmp(line, "ITEM ", 5) == 0)
         {
@@ -181,12 +191,12 @@ struct Dungeon *load_dungeon(char *filename)
             // copy the item name
             strncpy(current_item->name, trim_wspace(line + 5), 32);
             // hook up to the linked list
-            current_item->next = dungeon_tmp.rooms->items;
+            current_item->next = current_room->items;
             current_item->atk = 0;
             current_item->def = 0;
             current_item->mana = 0;
             current_item->type = IT_DEFAULT;
-            dungeon_tmp.rooms->items = current_item;
+            current_room->items = current_item;
         }
         else if (strnicmp(line, "EQUIP ", 6) == 0)
         {
@@ -216,14 +226,20 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strnicmp(line, "ENEMY ", 6) == 0)
         {
+            line = trim_wspace(line + 6);
+            if (current_room == 0)
+            {
+                printf("ERROR: Attempt to add enemy without room: `%s`", line);
+                continue;
+            }
             current_item = 0;
             current_enemy =
                 malloc(sizeof(struct EnemyTmp));
             // copy the enemy name
-            strncpy(current_enemy->name, trim_wspace(line + 6), 32);
+            strncpy(current_enemy->name, line, 32);
             // hook up to the linked list
-            current_enemy->next = dungeon_tmp.rooms->enemies;
-            dungeon_tmp.rooms->enemies = current_enemy;
+            current_enemy->next = current_room->enemies;
+            current_room->enemies = current_enemy;
             current_enemy->hp = 1;
             current_enemy->atk = 1;
             current_enemy->def = 0;
@@ -239,7 +255,13 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Could not parse HP: `%s`\n", line);
                 continue;
             }
-            current_enemy->hp = hp;
+            if (current_enemy == 0)
+            {
+                printf("ERROR: Attempt to add HP without enemy.\n");
+                continue;
+            }
+            else
+                current_enemy->hp = hp;
         }
         else if (strnicmp(line, "MANA ", 4) == 0)
         {
@@ -268,10 +290,10 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Could not parse ATK: `%s`\n", line);
                 continue;
             }
-            if (current_enemy != 0)
-                current_enemy->atk = atk;
-            else if (current_item != 0)
+            if (current_item != 0)
                 current_item->atk = atk;
+            else if (current_enemy != 0)
+                current_enemy->atk = atk;
             else
                 printf("ERROR: Attempt to add ATK without item or enemy.\n");
         }
@@ -285,17 +307,22 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Could not parse DEF: `%s`\n", line);
                 continue;
             }
-            if (current_enemy != 0)
-                current_enemy->def = def;
-            else if (current_item != 0)
+            if (current_item != 0)
                 current_item->def = def;
+            else if (current_enemy != 0)
+                current_enemy->def = def;
             else
                 printf("ERROR: Attempt to add DEF without item or enemy.\n");
         }
         else if (strnicmp(line, "DESC ", 5) == 0)
         {
+            if (current_room == 0)
+            {
+                printf("ERROR: Attempt to add a description without a room.\n");
+                continue;
+            }
             // add a description to the current room
-            strncpy(dungeon_tmp.rooms->desc, trim_wspace(line + 5), 128);
+            strncpy(current_room->desc, trim_wspace(line + 5), 128);
         }
         else if (strnicmp(line, "TAG ", 4) == 0)
         {
@@ -303,9 +330,182 @@ struct Dungeon *load_dungeon(char *filename)
             // copy the tag name
             strncpy(tag_tmp->tag, trim_wspace(line + 4), 16);
             // hook up to the linked list
-            tag_tmp->next = dungeon_tmp.rooms->tags;
-            dungeon_tmp.rooms->tags = tag_tmp;
-            dungeon_tmp.rooms->num_tags++;
+            if (current_room != 0)
+            {
+                tag_tmp->next = current_room->tags;
+                current_room->tags = tag_tmp;
+                current_room->num_tags++;
+            }
+            else if (current_spell != 0)
+            {
+                tag_tmp->next = current_spell->tags;
+                current_spell->tags = tag_tmp;
+                current_spell->num_tags++;
+            }
+            else
+            {
+                printf("ERROR: Attempt to add tag without a spell or room: `%s`\n", line + 4);
+                continue;
+            }
+        }
+        else if (strnicmp(line, "SPELL ", 6) == 0)
+        {
+            current_enemy = 0;
+            current_item = 0;
+            current_spell_target = 0;
+            current_room = 0;
+            line = trim_wspace(line + 6);
+            current_spell = malloc(sizeof(struct SpellTmp));
+            strncpy(current_spell->name, line, 32);
+            // set all the default values
+            current_spell->num_tags = 0;
+            current_spell->num_targets = 0;
+            current_spell->targets = 0;
+            current_spell->num_tags = 0;
+            // hook into the linked list
+            current_spell->next = dungeon_tmp.spells;
+            dungeon_tmp.spells = current_spell;
+            dungeon_tmp.num_spells++;
+        }
+        else if (strnicmp(line, "COST ", 5) == 0)
+        {
+            int cost = -1;
+            line = trim_wspace(line + 5);
+            sscanf(line, "%u", &cost);
+            if (cost == -1)
+            {
+                printf("ERROR: Could not parse cost: `%s`\n", line);
+                continue;
+            }
+            if (current_spell == 0)
+            {
+                printf("ERROR: Attempt to add cost without spell.\n");
+                continue;
+            }
+            else
+                current_spell->cost = cost;
+        }
+        else if (strncmp(line, "TARGET ", 7) == 0)
+        {
+            enum SpellTargetType type;
+            line = trim_wspace(line + 7);
+            if (strcmp(line, "ENEMY") == 0)
+                type = ST_TARGET_ENEMY;
+            else if (strcmp(line, "ALLY") == 0)
+                type = ST_TARGET_ALLY;
+            else if (strcmp(line, "SELF") == 0)
+                type = ST_SELF;
+            else
+            {
+                printf("ERROR: Invalid TARGET type: `%s`; expected `ENEMY`, `ALLY`, or `SELF`\n", line);
+                continue;
+            }
+            current_spell_target = malloc(sizeof(struct SpellTargetTmp));
+            // set default values
+            current_spell_target->effects = 0;
+            current_spell_target->num_effects = 0;
+            current_spell_target->type = type;
+            // hook into the linked list
+            current_spell_target->next = current_spell->targets;
+            current_spell->targets = current_spell_target;
+            current_spell->num_targets++;
+        }
+        else if (strncmp(line, "EACH ", 5) == 0)
+        {
+            enum SpellTargetType type;
+            line = trim_wspace(line + 5);
+            if (strcmp(line, "ENEMY") == 0)
+                type = ST_EACH_ENEMY;
+            else if (strcmp(line, "ALLY") == 0)
+                type = ST_EACH_ALLY;
+            else
+            {
+                printf("ERROR: Invalid EACH type: `%s`; expected `ENEMY` or `ALLY`\n", line);
+                continue;
+            }
+            current_spell_target = malloc(sizeof(struct SpellTargetTmp));
+            // set default values
+            current_spell_target->effects = 0;
+            current_spell_target->num_effects = 0;
+            current_spell_target->type = type;
+            // hook into the linked list
+            current_spell_target->next = current_spell->targets;
+            current_spell->targets = current_spell_target;
+            current_spell->num_targets++;
+        }
+        else if (strncmp(line, "EFFECT ", 7) == 0)
+        {
+            char effect[8];
+            int amount;
+            line = trim_wspace(line + 7);
+            if (sscanf(line, "%s %i", effect, &amount) <= 0)
+            {
+                printf("ERROR: Invalid EFFECT statement: `%s`. Usage is EFFECT <name> <amount>\n", line);
+                continue;
+            }
+            enum SpellEffectType type;
+            if (strcmp(effect, "RAGE") == 0)
+                type = SE_RAGE;
+            else if (strcmp(effect, "FORTIFY") == 0)
+                type = SE_FORTIFY;
+            else if (strcmp(effect, "MANA") == 0)
+                type = SE_MANA;
+            else if (strcmp(effect, "WEAK") == 0)
+                type = SE_WEAK;
+            else if (strcmp(effect, "BURN") == 0)
+                type = SE_BURN;
+            else if (strcmp(effect, "POISON") == 0)
+                type = SE_POISON;
+            else if (strcmp(effect, "STUN") == 0)
+                type = SE_STUN;
+            else if (strcmp(effect, "REGEN") == 0)
+                type = SE_REGEN;
+            else
+            {
+                printf("ERROR: Invalid EFFECT type: `%s`\n", line);
+            }
+            struct SpellEffectTmp *current_effect = malloc(sizeof(struct SpellEffectTmp));
+            // set our values
+            current_effect->amount = amount;
+            current_effect->type = type;
+            // hook into the linked list
+            current_spell_target->num_effects++;
+            current_effect->next = current_spell_target->effects;
+            current_spell_target->effects = current_effect;
+        }
+        else if (strncmp(line, "DMG ", 4) == 0)
+        {
+            int amount;
+            if (sscanf(line + 4, "%i", &amount) <= 0)
+            {
+                printf("ERROR: Invalid DMG value: `%s`; expected a number\n", line + 5);
+                continue;
+            }
+            struct SpellEffectTmp *current_effect = malloc(sizeof(struct SpellEffectTmp));
+            // set our values
+            current_effect->amount = amount;
+            current_effect->type = SE_DMG;
+            // hook into the linked list
+            current_spell_target->num_effects++;
+            current_effect->next = current_spell_target->effects;
+            current_spell_target->effects = current_effect;
+        }
+        else if (strncmp(line, "HEAL ", 5) == 0)
+        {
+            int amount;
+            if (sscanf(line + 5, "%i", &amount) <= 0)
+            {
+                printf("ERROR: Invalid HEAL value: `%s`; expected a number\n", line + 5);
+                continue;
+            }
+            struct SpellEffectTmp *current_effect = malloc(sizeof(struct SpellEffectTmp));
+            // set our values
+            current_effect->amount = amount;
+            current_effect->type = SE_HEAL;
+            // hook into the linked list
+            current_spell_target->num_effects++;
+            current_effect->next = current_spell_target->effects;
+            current_spell_target->effects = current_effect;
         }
         else if (*line != 0)
         {
