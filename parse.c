@@ -361,7 +361,7 @@ struct Dungeon *load_dungeon(char *filename)
             current_spell->num_tags = 0;
             current_spell->num_targets = 0;
             current_spell->targets = 0;
-            current_spell->num_tags = 0;
+            current_spell->tags = 0;
             // hook into the linked list
             current_spell->next = dungeon_tmp.spells;
             dungeon_tmp.spells = current_spell;
