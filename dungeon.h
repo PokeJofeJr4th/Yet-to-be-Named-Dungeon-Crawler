@@ -48,7 +48,7 @@ struct SpellTarget
 {
     struct SpellEffect *effects;
     int num_effects;
-    enum SpellTargetType target;
+    enum SpellTargetType type;
 };
 
 struct Spell
@@ -108,7 +108,9 @@ struct Room
 
 struct Dungeon
 {
+    struct Spell *spells;
     int num_rooms;
+    int num_spells;
     struct Room rooms[];
 };
 

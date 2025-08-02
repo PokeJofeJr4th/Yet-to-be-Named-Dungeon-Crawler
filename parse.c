@@ -517,6 +517,52 @@ struct Dungeon *load_dungeon(char *filename)
     // print_dungeon_tmp(dungeon_tmp);
     // allocate the dungeon with enough space to store all the rooms
     struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * dungeon_tmp.num_rooms);
+
+    dungeon->num_spells = dungeon_tmp.num_spells;
+    dungeon->spells = malloc(sizeof(struct Spell) * dungeon_tmp.num_spells);
+    // loop through the spells of the tmp and final dungeon in parallel
+    struct Spell *spell = dungeon->spells;
+    for (struct SpellTmp *spell_tmp = dungeon_tmp.spells; spell_tmp != 0; spell_tmp = spell_tmp->next)
+    {
+        // move over the trivial fields (cost+name)
+        spell->cost = spell_tmp->cost;
+        strcpy(spell->name, spell_tmp->name);
+        // move over the target blocks
+        spell->num_targets = spell_tmp->num_targets;
+        spell->targets = malloc(sizeof(struct SpellTarget) * spell->num_targets);
+        struct SpellTarget *target = spell->targets;
+        for (struct SpellTargetTmp *target_tmp = spell_tmp->targets; target_tmp != 0; target_tmp = target_tmp->next)
+        {
+            // copy over the target type
+            target->type = target_tmp->type;
+            // move over the effects
+            target->num_effects = target_tmp->num_effects;
+            target->effects = malloc(sizeof(struct SpellEffect) * target_tmp->num_effects);
+            struct SpellEffect *effect = target->effects;
+            for (struct SpellEffectTmp *effect_tmp = target_tmp->effects; effect_tmp != 0; effect_tmp = effect_tmp->next)
+            {
+                // copy over the fields
+                effect->amount = effect_tmp->amount;
+                effect->type = effect_tmp->type;
+                // go to the next effect in the array
+                effect++;
+            }
+            // go to the next target block in the array
+            target++;
+        }
+        // move over the tags
+        spell->num_tags = spell_tmp->num_tags;
+        spell->tags = malloc(sizeof(char *) * spell->num_tags);
+        char **tag = spell->tags;
+        for (struct TagTmp *tag_tmp = spell_tmp->tags; tag_tmp != 0; tag_tmp = tag_tmp->next)
+        {
+            *tag = strdup(tag_tmp->tag);
+            tag++;
+        }
+        // go to the next spell in the array
+        spell++;
+    }
+
     dungeon->num_rooms = dungeon_tmp.num_rooms;
     // loop through the rooms of the tmp and final dungeon in parallel
     struct Room *room = dungeon->rooms;
@@ -617,6 +663,30 @@ struct Dungeon *load_dungeon(char *filename)
         struct RoomTmp *r = room->next;
         free(room);
         room = r;
+    }
+    for (struct SpellTmp *spell = dungeon_tmp.spells; spell != 0;)
+    {
+        for (struct SpellTargetTmp *target = spell->targets; target != 0;)
+        {
+            for (struct SpellEffectTmp *effect = target->effects; effect != 0;)
+            {
+                struct SpellEffectTmp *e = effect->next;
+                free(effect);
+                effect = e;
+            }
+            struct SpellTargetTmp *t = target->next;
+            free(target);
+            target = t;
+        }
+        for (struct TagTmp *tag = spell->tags; tag != 0;)
+        {
+            struct TagTmp *nxt = tag->next;
+            free(tag);
+            tag = nxt;
+        }
+        struct SpellTmp *s = spell->next;
+        free(spell);
+        spell = s;
     }
     // print_dungeon(dungeon);
     return dungeon;
