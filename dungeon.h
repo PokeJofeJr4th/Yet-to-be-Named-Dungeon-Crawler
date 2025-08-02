@@ -91,6 +91,7 @@ struct Item
     int atk;
     int def;
     int mana;
+    struct Spell *grants;
     enum ItemType type;
 };
 

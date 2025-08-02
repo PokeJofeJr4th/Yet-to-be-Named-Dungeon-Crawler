@@ -50,31 +50,37 @@ void update_stats(struct Player *p)
     {
         p->stats.atk += p->head.atk;
         p->stats.def += p->head.def;
+        p->stats.mana += p->head.mana;
     }
     if (p->chest.name[0])
     {
         p->stats.atk += p->chest.atk;
         p->stats.def += p->chest.def;
+        p->stats.mana += p->chest.mana;
     }
     if (p->legs.name[0])
     {
         p->stats.atk += p->legs.atk;
         p->stats.def += p->legs.def;
+        p->stats.mana += p->legs.mana;
     }
     if (p->feet.name[0])
     {
         p->stats.atk += p->feet.atk;
         p->stats.def += p->feet.def;
+        p->stats.mana += p->feet.mana;
     }
     if (p->weapon.name[0])
     {
         p->stats.atk += p->weapon.atk;
         p->stats.def += p->weapon.def;
+        p->stats.mana += p->weapon.mana;
     }
     if (p->shield.name[0])
     {
         p->stats.atk += p->shield.atk;
         p->stats.def += p->shield.def;
+        p->stats.mana += p->shield.mana;
     }
 }
 

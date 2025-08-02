@@ -54,6 +54,7 @@ struct ItemTmp
     int atk;
     int def;
     int mana;
+    char *grants;
     enum ItemType type;
 };
 
@@ -195,8 +196,23 @@ struct Dungeon *load_dungeon(char *filename)
             current_item->atk = 0;
             current_item->def = 0;
             current_item->mana = 0;
+            current_item->grants = 0;
             current_item->type = IT_DEFAULT;
             current_room->items = current_item;
+        }
+        else if (strnicmp(line, "GRANTS ", 7) == 0)
+        {
+            line = trim_wspace(line + 7);
+            if (current_item == 0)
+            {
+                printf("ERROR: Attempt to use GRANTS without an item.\n");
+                continue;
+            }
+            if (current_item->grants != 0)
+            {
+                printf("ERROR: An item may not grant more than one spell.\n");
+            }
+            current_item->grants = strdup(line);
         }
         else if (strnicmp(line, "EQUIP ", 6) == 0)
         {
@@ -624,6 +640,24 @@ struct Dungeon *load_dungeon(char *filename)
             item->mana = item_tmp->mana;
             item->type = item_tmp->type;
             item->next = room->items;
+            item->grants = 0;
+            if (item_tmp->grants != 0)
+            {
+                int i = 0;
+                for (struct SpellTmp *spell = dungeon_tmp.spells; spell != 0; spell = spell->next)
+                {
+                    if (strcmp(spell->name, item_tmp->grants) == 0)
+                    {
+                        item->grants = dungeon->spells + i;
+                        break;
+                    }
+                    i++;
+                }
+                if (item->grants == 0)
+                {
+                    printf("ERROR: Failed to find spell `%s`, granted by item `%s`\n", item_tmp->grants, item_tmp->name);
+                }
+            }
             room->items = item;
         }
         // move over the tags
