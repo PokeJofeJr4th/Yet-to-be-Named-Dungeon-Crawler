@@ -26,6 +26,12 @@ void init_player(struct Player *p)
     p->stats.atk = 1;
     p->stats.hp = 10;
     p->stats.def = 0;
+    p->stats.burn = 0;
+    p->stats.fortify = 0;
+    p->stats.poison = 0;
+    p->stats.rage = 0;
+    p->stats.regen = 0;
+    p->stats.stun = 0;
     strcpy(p->stats.name, "You");
     p->head.name[0] = 0;
     p->chest.name[0] = 0;
@@ -88,6 +94,8 @@ char *fmt_item_type(enum ItemType it)
         return "weapon";
     case IT_SHIELD:
         return "shield";
+    case IT_CONSUME:
+        return "consume";
     default:
         return "?";
     }
@@ -98,7 +106,7 @@ void print_item(struct Item *i)
     printf("%s", i->name);
     if (i->type != IT_DEFAULT)
     {
-        printf("(%s slot:", fmt_item_type(i->type));
+        printf("(%s:", fmt_item_type(i->type));
         if (i->atk != 0)
         {
             printf(" %+i ATK", i->atk);
@@ -170,17 +178,18 @@ int main()
         if (strncmp(cmd_buffer, "move ", 5) == 0)
         {
             enum Direction dir;
-            if (stricmp(cmd_buffer + 5, "north") == 0)
+            char *input = trim_wspace(cmd_buffer + 5);
+            if (stricmp(input, "north") == 0)
                 dir = DIR_NORTH;
-            else if (stricmp(cmd_buffer + 5, "south") == 0)
+            else if (stricmp(input, "south") == 0)
                 dir = DIR_SOUTH;
-            else if (stricmp(cmd_buffer + 5, "east") == 0)
+            else if (stricmp(input, "east") == 0)
                 dir = DIR_EAST;
-            else if (stricmp(cmd_buffer + 5, "west") == 0)
+            else if (stricmp(input, "west") == 0)
                 dir = DIR_WEST;
             else
             {
-                printf("Unknown direction: `%s`\n", cmd_buffer + 5);
+                printf("Unknown direction: `%s`\n", input);
                 confirm();
                 continue;
             }
@@ -196,7 +205,7 @@ int main()
             }
             if (new_room == -1)
             {
-                printf("No exit %s", fmt_dir(dir));
+                printf("No exit %s\n", fmt_dir(dir));
                 confirm();
                 continue;
             }
@@ -390,7 +399,7 @@ int main()
         }
         else if (strcmp(cmd_buffer, "stats") == 0)
         {
-            printf("%s\nHP: %i\nATK: %i\nDEF: %i\nMANA: %i", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def, player.stats.mana);
+            printf("%s\nHP: %i\nATK: %i\nDEF: %i\nMANA: %i\n", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def, player.stats.mana);
             continue;
         }
         else if (strcmp(cmd_buffer, "q") == 0)

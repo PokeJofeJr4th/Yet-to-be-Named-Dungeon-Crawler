@@ -13,6 +13,12 @@ struct Combatant
     int atk;
     int def;
     int mana;
+    int rage;
+    int fortify;
+    int burn;
+    int poison;
+    int regen;
+    int stun;
 };
 
 enum SpellTargetType
@@ -31,7 +37,6 @@ enum SpellEffectType
     SE_RAGE,
     SE_WEAK,
     SE_FORTIFY,
-    SE_MANA,
     SE_BURN,
     SE_POISON,
     SE_STUN,
@@ -76,6 +81,7 @@ enum ItemType
     IT_ARMOR_LEGS,
     IT_ARMOR_FEET,
     IT_SHIELD,
+    IT_CONSUME,
 };
 
 struct Item

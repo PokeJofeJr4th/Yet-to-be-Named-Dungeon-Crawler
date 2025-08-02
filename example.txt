@@ -1,38 +1,38 @@
-SPELL Firebolt
- TARGET ENEMY
-  DMG 2
+SPELL    Firebolt
+ TARGET  ENEMY
+  DMG    2
   EFFECT BURN 2
- COST 1
- TAG FIRE
+ COST    1
+ TAG     FIRE
 
-SPELL Stoneskin
- TARGET SELF
+SPELL    Stoneskin
+ TARGET  SELF
   EFFECT FORTIFY 3
- COST 1
- TAG EARTH
+ COST    1
+ TAG     EARTH
 
 SPELL Magic Missile
  EACH ENEMY
   DMG 1
  COST 1
- TAG ARCANE
+ TAG  ARCANE
 
-SPELL Venom Touch
- TARGET ENEMY
-  DMG 1
-  EFFECT WEAK 2
+SPELL    Venom Touch
+ TARGET  ENEMY
+  DMG    1
+  EFFECT WEAK   2
   EFFECT POISON 3
- COST 1
- TAG POISON
+ COST    1
+ TAG     POISON
 
-SPELL Mass Restoration
- EACH ALLY
-  HEAL 2
+SPELL    Mass Restoration
+ EACH    ALLY
+  HEAL   2
   EFFECT FORTIFY 2
- COST 2
- TAG LIGHT
+ COST    2
+ TAG     LIGHT
 
-ROOM Entrance Hall
+ROOM    Entrance Hall
  DESC   A cold stone chamber with dripping moss.
  TAG    START
  ITEM   Rusty Sword
@@ -45,7 +45,7 @@ ROOM Entrance Hall
   HP    2
  EXIT   NORTH Great Hall
 
-ROOM Great Hall
+ROOM   Great Hall
  DESC  A vast hall with a broken chandelier.
  ENEMY Orc Brute
   HP   4
@@ -55,70 +55,72 @@ ROOM Great Hall
  EXIT  EAST  Armory
  EXIT  NORTH Chapel
 
-ROOM Armory
- DESC Shelves lined with dust and old weapons.
- ITEM Iron Greaves
+ROOM    Armory
+ DESC   Shelves lined with dust and old weapons.
+ ITEM   Iron Greaves
   EQUIP LEGS
   DEF   1
- ITEM Heater Shield
+ ITEM   Heater Shield
   EQUIP SHIELD
   DEF   2
- EXIT WEST Great Hall
+ EXIT   WEST Great Hall
 
-ROOM Chapel
- DESC A quiet place, scorched by dark rituals.
- ITEM Healing Potion
- ITEM Silver Circlet
-  EQUIP HEAD
-  DEF   1
- ENEMY Cult Acolyte
-  HP    3
-  ATK   1
-  DEF   1
- EXIT SOUTH Great Hall
- EXIT EAST  Crypt
+ROOM     Chapel
+ DESC    A quiet place, scorched by dark rituals.
+ ITEM    Healing Potion
+ ITEM    Silver Circlet
+  EQUIP  HEAD
+  DEF    1
+  GRANTS Firebolt
+ ENEMY   Cult Acolyte
+  HP     3
+  ATK    1
+  DEF    1
+ EXIT    SOUTH Great Hall
+ EXIT    EAST  Crypt
 
-ROOM Crypt
- DESC Cracked stone coffins and stale air.
- ITEM Bone Wand
-  EQUIP WEAPON
-  ATK   1
- ITEM Tattered Robes
-  EQUIP CHEST
-  DEF   1
- ENEMY Skeleton
-  HP    3
-  ATK   1
- EXIT WEST Chapel
+ROOM     Crypt
+ DESC    Cracked stone coffins and stale air.
+ ITEM    Bone Wand
+  EQUIP  WEAPON
+  ATK    1
+  GRANTS Magic Missile
+ ITEM    Tattered Robes
+  EQUIP  CHEST
+  DEF    1
+ ENEMY   Skeleton
+  HP     3
+  ATK    1
+ EXIT    WEST Chapel
 
-ROOM Kitchen
- DESC Rotten food and shattered dishes cover the floor.
- ITEM Iron Boots
+ROOM    Kitchen
+ DESC   Rotten food and shattered dishes cover the floor.
+ ITEM   Iron Boots
   EQUIP FEET
   DEF   1
- ENEMY Rat Swarm
+ ENEMY  Rat Swarm
   HP    2
   ATK   1
- EXIT WEST Great Hall
+ EXIT   WEST Great Hall
 
-ROOM Barracks
- DESC Broken beds and bloodstains mark old conflict.
- ITEM Chainmail Pants
+ROOM    Barracks
+ DESC   Broken beds and bloodstains mark old conflict.
+ ITEM   Chainmail Pants
   EQUIP LEGS
   DEF   2
- ITEM Tower Shield
+ ITEM   Tower Shield
   EQUIP SHIELD
   DEF   3
- ENEMY Goblin Captain
+ ENEMY  Goblin Captain
   HP    5
   ATK   3
   DEF   1
- EXIT NORTH Armory
+ EXIT   NORTH Armory
 
-ROOM Hidden Niche
- DESC A secret alcove behind a loose stone.
- ITEM Elixir of Might
- ITEM Gold-Plated Helm
+ROOM    Hidden Niche
+ DESC   A secret alcove behind a loose stone.
+ ITEM   Elixir of Might
+ ITEM   Gold-Plated Helm
   EQUIP HEAD
   DEF   2
- EXIT EAST Crypt
+ EXIT   EAST Crypt

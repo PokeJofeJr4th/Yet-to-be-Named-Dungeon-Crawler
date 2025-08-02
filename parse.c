@@ -448,8 +448,6 @@ struct Dungeon *load_dungeon(char *filename)
                 type = SE_RAGE;
             else if (strcmp(effect, "FORTIFY") == 0)
                 type = SE_FORTIFY;
-            else if (strcmp(effect, "MANA") == 0)
-                type = SE_MANA;
             else if (strcmp(effect, "WEAK") == 0)
                 type = SE_WEAK;
             else if (strcmp(effect, "BURN") == 0)
@@ -579,6 +577,12 @@ struct Dungeon *load_dungeon(char *filename)
         {
             struct Enemy *enemy = malloc(sizeof(struct Enemy));
             strncpy(enemy->stats.name, enemy_tmp->name, 32);
+            enemy->stats.burn = 0;
+            enemy->stats.fortify = 0;
+            enemy->stats.poison = 0;
+            enemy->stats.rage = 0;
+            enemy->stats.regen = 0;
+            enemy->stats.stun = 0;
             enemy->stats.hp = enemy_tmp->hp;
             enemy->stats.atk = enemy_tmp->atk;
             enemy->stats.def = enemy_tmp->def;
