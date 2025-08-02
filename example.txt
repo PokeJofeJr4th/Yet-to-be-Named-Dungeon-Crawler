@@ -1,3 +1,38 @@
+SPELL Firebolt
+ TARGET ENEMY
+  DMG 2
+  STATUS BURN 2
+ COST 1
+ TAG FIRE
+
+SPELL Stoneskin
+ TARGET SELF
+  BUFF DEF 2 3
+ COST 1
+ TAG EARTH
+
+SPELL Magic Missile
+ EACH ENEMY
+  DMG 1
+ COST 1
+ TAG ARCANE
+
+SPELL Venom Touch
+ TARGET ENEMY
+  DMG 1
+  DEBUFF ATK 1 2
+  STATUS POISON 3
+ COST 1
+ TAG POISON
+
+SPELL Mass Restoration
+ EACH ALLY
+  HEAL 2
+  BUFF DEF 1 2
+ COST 2
+ TAG LIGHT
+
+
 ROOM Entrance Hall
  DESC   A cold stone chamber with dripping moss.
  TAG    START

@@ -15,6 +15,51 @@ struct Combatant
     int mana;
 };
 
+enum SpellTargetType
+{
+    ST_TARGET_ENEMY,
+    ST_EACH_ENEMY,
+    ST_TARGET_ALLY,
+    ST_EACH_ALLY,
+    ST_SELF
+};
+
+enum SpellEffectType
+{
+    SE_DMG,
+    SE_HEAL,
+    SE_RAGE,
+    SE_FORTIFY,
+    SE_MANA,
+    SE_BURN,
+    SE_POISON,
+    SE_STUN,
+    SE_REGEN,
+};
+
+struct SpellEffect
+{
+    int amount;
+    int duration;
+    enum SpellEffectType type;
+};
+
+struct SpellTarget
+{
+    enum SpellTargetType target;
+    int num_effects;
+    struct SpellEffect *effects;
+};
+
+struct Spell
+{
+    char name[32];
+    int num_targets;
+    int num_tags;
+    struct SpellTarget *targets;
+    char **tags;
+};
+
 struct Enemy
 {
     struct Combatant stats;
