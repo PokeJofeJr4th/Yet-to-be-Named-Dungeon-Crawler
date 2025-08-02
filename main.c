@@ -163,6 +163,79 @@ void print_room(struct Room *room, struct Dungeon *dungeon)
     }
 }
 
+void print_spell(struct Spell *spell)
+{
+    printf("%s (cost: %i)\n", spell->name, spell->cost);
+    if (spell->num_tags != 0)
+    {
+        printf(" Tags: %s", spell->tags[0]);
+        for (int i = 1; i < spell->num_tags; i++)
+        {
+            printf(", %s", spell->tags[i]);
+        }
+        printf("\n");
+    }
+    for (int i = 0; i < spell->num_targets; i++)
+    {
+        struct SpellTarget *t = &spell->targets[i];
+        switch (t->type)
+        {
+        case ST_EACH_ALLY:
+            printf(" All Allies:\n");
+            break;
+        case ST_TARGET_ALLY:
+            printf(" Target an Ally:\n");
+            break;
+        case ST_EACH_ENEMY:
+            printf(" All Enemies:\n");
+            break;
+        case ST_TARGET_ENEMY:
+            printf(" Target an Enemy:\n");
+            break;
+        case ST_SELF:
+            printf(" Self:\n");
+            break;
+        default:
+            break;
+        }
+        for (int j = 0; j < t->num_effects; j++)
+        {
+            switch (t->effects[j].type)
+            {
+            case SE_BURN:
+                printf("  Apply burn %i\n", t->effects[j].amount);
+                break;
+            case SE_FORTIFY:
+                printf("  Apply fortify %i\n", t->effects[j].amount);
+                break;
+            case SE_POISON:
+                printf("  Apply poison %i\n", t->effects[j].amount);
+                break;
+            case SE_RAGE:
+                printf("  Apply rage %i\n", t->effects[j].amount);
+                break;
+            case SE_REGEN:
+                printf("  Apply regeneration %i\n", t->effects[j].amount);
+                break;
+            case SE_STUN:
+                printf("  Apply stunned %i\n", t->effects[j].amount);
+                break;
+            case SE_WEAK:
+                printf("  Apply weakness %i\n", t->effects[j].amount);
+                break;
+            case SE_DMG:
+                printf("  Deal %i damage\n", t->effects[j].amount);
+                break;
+            case SE_HEAL:
+                printf("  Heal %i\n", t->effects[j].amount);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
 int main()
 {
     struct Dungeon *dungeon = load_dungeon("example.txt");
@@ -452,6 +525,12 @@ int main()
         else if (strcmp(cmd_buffer, "stats") == 0)
         {
             printf("%s\nHP: %i\nATK: %i\nDEF: %i\nMANA: %i\n", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def, player.stats.mana);
+            continue;
+        }
+        else if (strcmp(cmd_buffer, "spellbook") == 0 || strcmp(cmd_buffer, "spells") == 0)
+        {
+            for (struct SpellPage *p = player.spellbook; p != 0; p = p->next)
+                print_spell(p->spell);
             continue;
         }
         else if (strcmp(cmd_buffer, "q") == 0)
