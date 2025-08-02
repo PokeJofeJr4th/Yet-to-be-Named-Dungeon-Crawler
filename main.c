@@ -41,6 +41,7 @@ void init_player(struct Player *p)
     p->weapon.name[0] = 0;
     p->shield.name[0] = 0;
     p->inventory = 0;
+    p->spellbook = 0;
 }
 
 void update_stats(struct Player *p)
@@ -298,6 +299,13 @@ int main()
                     }
                     if (slot == 0)
                         continue;
+                    if (item->grants != 0)
+                    {
+                        struct SpellPage *page = malloc(sizeof(struct SpellPage));
+                        page->next = player.spellbook;
+                        player.spellbook = page;
+                        page->spell = item->grants;
+                    }
                     struct Item tmp;
                     memcpy(&tmp, slot, sizeof(struct Item));
                     memcpy(slot, item, sizeof(struct Item));
@@ -305,6 +313,19 @@ int main()
                     // if there was something in the slot
                     if (tmp.name[0])
                     {
+                        struct SpellPage *prev = 0;
+                        for (struct SpellPage *p = 0; p != 0; p = p->next)
+                        {
+                            if (p->spell == tmp.grants)
+                            {
+                                if (prev == 0)
+                                    player.spellbook = p->next;
+                                else
+                                    prev->next = p->next;
+                                free(p);
+                                break;
+                            }
+                        }
                         slot = item->next;
                         memcpy(item, &tmp, sizeof(struct Item));
                         item->next = slot;
@@ -365,19 +386,18 @@ int main()
         {
             char *spell_name = trim_wspace(cmd_buffer + 5);
             struct Spell *spell = 0;
-            for (int i = 0; i < dungeon->num_spells; i++)
+            for (struct SpellPage *p = player.spellbook; p != 0; p = p->next)
             {
-                if (strcmp(spell_name, dungeon->spells[i].name) != 0)
+                if (strcmp(spell_name, p->spell->name) != 0)
                     continue;
-                spell = &dungeon->spells[i];
+                spell = p->spell;
                 break;
             }
             if (spell == 0)
             {
-                printf("Unknown spell `%s`\n", spell_name);
+                printf("You can't cast `%s`\n", spell_name);
                 continue;
             }
-            // TODO: Make sure the player can cast the spell
             resolve_spell(spell, player.stats.mana, room, &player.stats);
         }
         else if (strcmp(cmd_buffer, "inv") == 0 || strcmp(cmd_buffer, "inventory") == 0)

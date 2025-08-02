@@ -121,10 +121,17 @@ struct Dungeon
     struct Room rooms[];
 };
 
+struct SpellPage
+{
+    struct Spell *spell;
+    struct SpellPage *next;
+};
+
 struct Player
 {
     struct Combatant stats;
     struct Item *inventory;
+    struct SpellPage *spellbook;
     // these fields are all optional. If the item name is empty, there's no item.
     struct Item head;
     struct Item chest;
