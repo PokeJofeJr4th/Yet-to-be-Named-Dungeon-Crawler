@@ -352,6 +352,7 @@ int main()
                             prev->next = enemy->next;
                         free(enemy);
                     }
+                    break;
                 }
             }
             if (!found)
@@ -359,6 +360,25 @@ int main()
                 printf("No such enemy: `%s`", enemy_name);
                 continue;
             }
+        }
+        else if (strncmp(cmd_buffer, "cast ", 5) == 0)
+        {
+            char *spell_name = trim_wspace(cmd_buffer + 5);
+            struct Spell *spell = 0;
+            for (int i = 0; i < dungeon->num_spells; i++)
+            {
+                if (strcmp(spell_name, dungeon->spells[i].name) != 0)
+                    continue;
+                spell = &dungeon->spells[i];
+                break;
+            }
+            if (spell == 0)
+            {
+                printf("Unknown spell `%s`\n", spell_name);
+                continue;
+            }
+            // TODO: Make sure the player can cast the spell
+            resolve_spell(spell, player.stats.mana, room, &player.stats);
         }
         else if (strcmp(cmd_buffer, "inv") == 0 || strcmp(cmd_buffer, "inventory") == 0)
         {
@@ -413,10 +433,6 @@ int main()
         {
             printf("%s\nHP: %i\nATK: %i\nDEF: %i\nMANA: %i\n", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def, player.stats.mana);
             continue;
-        }
-        else if (strncmp(cmd_buffer, "cast ", 5) == 0)
-        {
-            char *spell_name = trim_wspace(cmd_buffer + 5);
         }
         else if (strcmp(cmd_buffer, "q") == 0)
             break;

@@ -1,5 +1,7 @@
 #include "dungeon.h"
 #include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
 int take_damage(struct Combatant *target, int dmg)
 {
@@ -88,6 +90,43 @@ void apply_effect(struct SpellEffect *effect, int mana, struct Combatant *target
     }
 }
 
-void resolve_spell(struct Spell *spell, int mana)
+void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Combatant *caster)
 {
+    for (int i = 0; i < spell->num_targets; i++)
+    {
+        struct SpellTarget *target = &spell->targets[i];
+        switch (target->type)
+        {
+        case ST_SELF:
+        case ST_EACH_ALLY:
+        case ST_TARGET_ALLY:
+            for (int j = 0; j < target->num_effects; j++)
+                apply_effect(&target->effects[j], mana, caster);
+            break;
+        case ST_EACH_ENEMY:
+            for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+                for (int j = 0; j < target->num_effects; j++)
+                    apply_effect(&target->effects[j], mana, &enemy->stats);
+            break;
+        case ST_TARGET_ENEMY:
+            char buffer[128];
+            printf("Select an enemy to target");
+            read_input(buffer);
+            for (int i = strlen(buffer) - 1; i > 0 && isspace(buffer[i]); buffer[i--] = '\0')
+                ;
+            char *line = trim_wspace(buffer);
+            for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+            {
+                if (strcmp(enemy->stats.name, line) != 0)
+                    continue;
+                for (int j = 0; j < target->num_effects; j++)
+                    apply_effect(&target->effects[j], mana, &enemy->stats);
+                break;
+            }
+            break;
+        default:
+            // TODO
+            break;
+        }
+    }
 }

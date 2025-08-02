@@ -134,7 +134,15 @@ struct Player
     struct Item shield;
 };
 
+// I/O Helper Functions
 char *fmt_dir(enum Direction);
 char *trim_wspace(char *);
+void confirm();
+void read_input(char *buffer);
+
+// Dungeon Initialization
 struct Dungeon *load_dungeon(char *);
+
+// Combat
 void fight(struct Combatant *attacker, struct Combatant *target);
+void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Combatant *caster);
