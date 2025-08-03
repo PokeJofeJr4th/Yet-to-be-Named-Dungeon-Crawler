@@ -441,6 +441,8 @@ int main()
             {
                 if (strcmp(item_name, item->name) == 0 && item->type == IT_CONSUME)
                 {
+                    print_spell(item->grants);
+                    confirm();
                     resolve_spell(item->grants, player.stats.mana, room, &player.stats);
                     // delete the item
                     if (prev == 0)
@@ -454,11 +456,7 @@ int main()
                 }
                 prev = item;
             }
-            if (found_item)
-            {
-                update_stats(&player);
-            }
-            else
+            if (found_item == 0)
             {
                 printf("Failed to find consumable item: `%s`\n", item_name);
                 continue;
@@ -562,7 +560,27 @@ int main()
         }
         else if (strcmp(cmd_buffer, "stats") == 0)
         {
-            printf("%s\nHP: %i/%i\nATK: %i\nDEF: %i\nMANA: %i\n", player.stats.name, player.stats.hp, player.stats.max_hp, player.stats.atk, player.stats.def, player.stats.mana);
+            printf("%s\nHP: %i/%i\nATK: %i", player.stats.name, player.stats.hp, player.stats.max_hp, player.stats.atk);
+            if (player.stats.rage != 0)
+                printf(" (%+i)", player.stats.rage);
+            printf("\nDEF: %i", player.stats.def);
+            if (player.stats.fortify != 0)
+                printf(" (%+i)", player.stats.fortify);
+            printf("\nMANA: %i\n", player.stats.mana);
+            if (player.stats.burn > 0)
+                printf("burn %i\n", player.stats.burn);
+            if (player.stats.poison > 0)
+                printf("poison %i\n", player.stats.poison);
+            if (player.stats.regen > 0)
+                printf("regen %i\n", player.stats.regen);
+            if (player.stats.rage > 0)
+                printf("rage %i\n", player.stats.rage);
+            if (player.stats.rage < 0)
+                printf("weakness %i\n", -player.stats.rage);
+            if (player.stats.fortify > 0)
+                printf("fortify %i\n", player.stats.fortify);
+            if (player.stats.stun > 0)
+                printf("stunned %i\n", player.stats.stun);
             continue;
         }
         else if (strcmp(cmd_buffer, "spellbook") == 0 || strcmp(cmd_buffer, "spells") == 0)
