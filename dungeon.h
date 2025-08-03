@@ -10,6 +10,7 @@ struct Combatant
 {
     char name[32];
     int hp;
+    int max_hp;
     int atk;
     int def;
     int mana;

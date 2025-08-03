@@ -25,6 +25,7 @@ void init_player(struct Player *p)
 {
     p->stats.atk = 1;
     p->stats.hp = 10;
+    p->stats.max_hp = 10;
     p->stats.def = 0;
     p->stats.mana = 0;
     p->stats.burn = 0;
@@ -144,7 +145,7 @@ void print_room(struct Room *room, struct Dungeon *dungeon)
     {
         printf("Enemies:\n");
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-            printf(" %s (%u HP, %u ATK, %u DEF)\n", enemy->stats.name, enemy->stats.hp, enemy->stats.atk, enemy->stats.def);
+            printf(" %s (%u/%u HP, %u ATK, %u DEF)\n", enemy->stats.name, enemy->stats.hp, enemy->stats.max_hp, enemy->stats.atk, enemy->stats.def);
     }
     if (room->items != 0)
     {
@@ -255,6 +256,11 @@ int main()
         }
         if (room != 0)
             break;
+    }
+    if (room == 0)
+    {
+        printf("No room with tag `START` found.\n");
+        return -1;
     }
     char cmd_buffer[128];
     print_room(room, dungeon);
@@ -524,7 +530,7 @@ int main()
         }
         else if (strcmp(cmd_buffer, "stats") == 0)
         {
-            printf("%s\nHP: %i\nATK: %i\nDEF: %i\nMANA: %i\n", player.stats.name, player.stats.hp, player.stats.atk, player.stats.def, player.stats.mana);
+            printf("%s\nHP: %i/%i\nATK: %i\nDEF: %i\nMANA: %i\n", player.stats.name, player.stats.hp, player.stats.max_hp, player.stats.atk, player.stats.def, player.stats.mana);
             continue;
         }
         else if (strcmp(cmd_buffer, "spellbook") == 0 || strcmp(cmd_buffer, "spells") == 0)

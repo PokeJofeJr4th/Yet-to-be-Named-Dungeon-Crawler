@@ -1,3 +1,9 @@
+SPELL    Heal
+ TARGET  SELF
+  HEAL   2
+  EFFECT REGEN 2
+ TAG     LIGHT
+
 SPELL    Firebolt
  TARGET  ENEMY
   DMG    2
@@ -70,19 +76,20 @@ ROOM    Armory
   DEF   2
  EXIT   WEST Great Hall
 
-ROOM     Chapel
- DESC    A quiet place, scorched by dark rituals.
- ITEM    Healing Potion
- ITEM    Silver Circlet
-  EQUIP  HEAD
-  DEF    1
-  GRANTS Firebolt
- ENEMY   Cult Acolyte
-  HP     3
-  ATK    1
-  DEF    1
- EXIT    SOUTH Great Hall
- EXIT    EAST  Crypt
+ROOM      Chapel
+ DESC     A quiet place, scorched by dark rituals.
+ ITEM     Healing Potion
+  CONSUME Heal
+ ITEM     Silver Circlet
+  EQUIP   HEAD
+  DEF     1
+  GRANTS  Firebolt
+ ENEMY    Cult Acolyte
+  HP      3
+  ATK     1
+  DEF     1
+ EXIT     SOUTH Great Hall
+ EXIT     EAST  Crypt
 
 ROOM     Crypt
  DESC    Cracked stone coffins and stale air.

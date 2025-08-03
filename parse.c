@@ -600,6 +600,7 @@ struct Dungeon *load_dungeon(char *filename)
             enemy->stats.regen = 0;
             enemy->stats.stun = 0;
             enemy->stats.hp = enemy_tmp->hp;
+            enemy->stats.max_hp = enemy_tmp->hp;
             enemy->stats.atk = enemy_tmp->atk;
             enemy->stats.def = enemy_tmp->def;
             enemy->stats.mana = enemy_tmp->mana;

@@ -6,15 +6,21 @@
 int take_damage(struct Combatant *target, int dmg)
 {
     if (dmg <= 0)
-    {
         dmg = 1;
-    }
     if (dmg > target->hp)
-    {
         dmg = target->hp;
-    }
     target->hp -= dmg;
     return dmg;
+}
+
+int heal(struct Combatant *target, int healing)
+{
+    if (healing <= 0)
+        healing = 1;
+    if (healing + target->hp > target->max_hp)
+        healing = target->max_hp - target->hp;
+    target->hp += healing;
+    return healing;
 }
 
 void fight(struct Combatant *attacker, struct Combatant *target)
@@ -46,7 +52,7 @@ void tick(struct Combatant *c)
     if (c->poison)
         printf("%s takes %i damage from poison.\n", c->name, take_damage(c, c->poison--));
     if (c->regen)
-        c->hp += c->regen--;
+        printf("%s heals %i HP from regeneration.\n", c->name, heal(c, c->regen--));
     if (c->fortify)
         c->fortify--;
     if (c->rage != 0)
@@ -67,7 +73,7 @@ void apply_effect(struct SpellEffect *effect, int mana, struct Combatant *target
         target->fortify += magnitude;
         break;
     case SE_HEAL:
-        target->hp += magnitude;
+        heal(target, magnitude);
         break;
     case SE_POISON:
         target->poison += magnitude;
