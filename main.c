@@ -589,6 +589,7 @@ int main()
             tick(&enemy->stats);
             if (enemy->stats.hp <= 0)
             {
+                printf("%s has perished.\n", enemy->stats.name);
                 if (prev == 0)
                 {
                     room->enemies = enemy->next;
@@ -609,6 +610,12 @@ int main()
             }
         }
         tick(&player.stats);
+        if (player.stats.hp <= 0)
+        {
+            printf("%s has perished.\n", player.stats.name);
+            confirm();
+            return 0;
+        }
         print_room(room, dungeon);
     }
 }
