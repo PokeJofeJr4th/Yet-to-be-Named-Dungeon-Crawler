@@ -432,6 +432,38 @@ int main()
                 continue;
             }
         }
+        else if (strncmp(cmd_buffer, "consume ", 8) == 0)
+        {
+            char *item_name = trim_wspace(cmd_buffer + 8);
+            struct Item *prev = 0;
+            int found_item = 0;
+            for (struct Item *item = player.inventory; item != 0; item = item->next)
+            {
+                if (strcmp(item_name, item->name) == 0 && item->type == IT_CONSUME)
+                {
+                    resolve_spell(item->grants, player.stats.mana, room, &player.stats);
+                    // delete the item
+                    if (prev == 0)
+                        player.inventory = item->next;
+                    else
+                        prev->next = item->next;
+                    free(item);
+                    // say we found an item
+                    found_item = 1;
+                    break;
+                }
+                prev = item;
+            }
+            if (found_item)
+            {
+                update_stats(&player);
+            }
+            else
+            {
+                printf("Failed to find consumable item: `%s`\n", item_name);
+                continue;
+            }
+        }
         else if (strncmp(cmd_buffer, "fight ", 5) == 0)
         {
             char *enemy_name = trim_wspace(cmd_buffer + 5);
@@ -560,16 +592,21 @@ int main()
                 if (prev == 0)
                 {
                     room->enemies = enemy->next;
+                    free(enemy);
+                    enemy = room->enemies;
                 }
                 else
                 {
                     prev->next = enemy->next;
+                    free(enemy);
+                    enemy = prev->next;
                 }
-                free(enemy);
-                enemy = prev->next;
             }
             else
+            {
+                prev = enemy;
                 enemy = enemy->next;
+            }
         }
         tick(&player.stats);
         print_room(room, dungeon);

@@ -191,13 +191,14 @@ struct Dungeon *load_dungeon(char *filename)
             current_item = malloc(sizeof(struct ItemTmp));
             // copy the item name
             strncpy(current_item->name, trim_wspace(line + 5), 32);
-            // hook up to the linked list
-            current_item->next = current_room->items;
+            // add the default values
             current_item->atk = 0;
             current_item->def = 0;
             current_item->mana = 0;
             current_item->grants = 0;
             current_item->type = IT_DEFAULT;
+            // hook up to the linked list
+            current_item->next = current_room->items;
             current_room->items = current_item;
         }
         else if (strnicmp(line, "GRANTS ", 7) == 0)
@@ -205,21 +206,48 @@ struct Dungeon *load_dungeon(char *filename)
             line = trim_wspace(line + 7);
             if (current_item == 0)
             {
-                printf("ERROR: Attempt to use GRANTS without an item.\n");
+                printf("ERROR: Attempt to add GRANTS without an item.\n");
                 continue;
             }
             if (current_item->grants != 0)
             {
                 printf("ERROR: An item may not grant more than one spell.\n");
+                continue;
             }
             current_item->grants = strdup(line);
+        }
+        else if (strncmp(line, "CONSUME ", 8) == 0)
+        {
+            line = trim_wspace(line + 8);
+            if (current_item == 0)
+            {
+                printf("ERROR: Attempt to add CONSUME without item.\n");
+                continue;
+            }
+            if (current_item->grants != 0)
+            {
+                printf("ERROR: An item may not grant more than one spell.\n");
+                continue;
+            }
+            if (current_item->type != IT_DEFAULT)
+            {
+                printf("ERROR: An item may only be marked with one EQUIP or CONSUME.\n");
+                continue;
+            }
+            current_item->grants = strdup(line);
+            current_item->type = IT_CONSUME;
         }
         else if (strnicmp(line, "EQUIP ", 6) == 0)
         {
             line = trim_wspace(line + 6);
             if (current_item == 0)
             {
-                printf("ERROR: Attempt to use EQUIP without an item.\n");
+                printf("ERROR: Attempt to add EQUIP without an item.\n");
+                continue;
+            }
+            if (current_item->type != IT_DEFAULT)
+            {
+                printf("ERROR: An item may only be marked with one EQUIP or CONSUME.\n");
                 continue;
             }
             if (stricmp(line, "HEAD") == 0)
@@ -525,10 +553,8 @@ struct Dungeon *load_dungeon(char *filename)
         {
             printf("ERROR: Could not parse: `%s`\n", line);
         }
-        // ignore empty/invalid lines (?)
     }
     fclose(f);
-    // print_dungeon_tmp(dungeon_tmp);
     // allocate the dungeon with enough space to store all the rooms
     struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * dungeon_tmp.num_rooms);
 
@@ -576,7 +602,6 @@ struct Dungeon *load_dungeon(char *filename)
         // go to the next spell in the array
         spell++;
     }
-
     dungeon->num_rooms = dungeon_tmp.num_rooms;
     // loop through the rooms of the tmp and final dungeon in parallel
     struct Room *room = dungeon->rooms;
@@ -727,46 +752,5 @@ struct Dungeon *load_dungeon(char *filename)
         free(spell);
         spell = s;
     }
-    // print_dungeon(dungeon);
     return dungeon;
-}
-
-void print_dungeon_tmp(struct DungeonTmp dungeon)
-{
-    for (struct RoomTmp *room = dungeon.rooms; room != 0; room = room->next)
-    {
-        printf("\nROOM %s\n", room->name);
-        if (*room->desc)
-            printf(" DESC %s\n", room->desc);
-        for (struct TagTmp *tag = room->tags; tag != 0; tag = tag->next)
-            printf(" TAG %s\n", tag->tag);
-        for (struct EnemyTmp *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-            printf(" ENEMY %s\n  HP %u\n  ATK %u\n  DEF %u\n", enemy->name, enemy->hp, enemy->atk, enemy->def);
-        for (struct ItemTmp *item = room->items; item != 0; item = item->next)
-            printf(" ITEM %s\n", item->name);
-        for (struct ExitTmp *exit = room->exits; exit != 0; exit = exit->next)
-            printf(" EXIT %s %s\n", fmt_dir(exit->exit_dir), exit->exit_to);
-    }
-}
-
-void print_dungeon(struct Dungeon *dungeon)
-{
-    for (int room_id = 0; room_id < dungeon->num_rooms; room_id++)
-    {
-        struct Room *room = &dungeon->rooms[room_id];
-        printf("\nROOM %s\n", room->name);
-        if (*room->desc)
-            printf(" DESC %s\n", room->desc);
-        for (int tag_id = 0; tag_id < room->num_tags; tag_id++)
-            printf(" TAG %s\n", room->tags[tag_id]);
-        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-            printf(" ENEMY %s\n\n  HP %u\n  ATK %u\n  DEF %u\n", enemy->stats.name, enemy->stats.hp, enemy->stats.atk, enemy->stats.def);
-        for (struct Item *item = room->items; item != 0; item = item->next)
-            printf(" ITEM %s\n", item->name);
-        for (int exit_id = 0; exit_id < room->num_exits; exit_id++)
-        {
-            struct Exit *exit = &room->exits[exit_id];
-            printf(" EXIT %s %s\n", fmt_dir(exit->dir), dungeon->rooms[exit->room].name);
-        }
-    }
 }

@@ -82,7 +82,7 @@ ROOM      Chapel
   CONSUME Heal
  ITEM     Silver Circlet
   EQUIP   HEAD
-  DEF     1
+  MANA    1
   GRANTS  Firebolt
  ENEMY    Cult Acolyte
   HP      3
@@ -96,10 +96,11 @@ ROOM     Crypt
  ITEM    Bone Wand
   EQUIP  WEAPON
   ATK    1
+  MANA   1
   GRANTS Magic Missile
  ITEM    Tattered Robes
   EQUIP  CHEST
-  DEF    1
+  MANA   3
  ENEMY   Skeleton
   HP     3
   ATK    1
