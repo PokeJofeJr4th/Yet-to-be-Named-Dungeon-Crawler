@@ -426,8 +426,7 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add cost without spell.\n");
                 continue;
             }
-            else
-                current_spell->cost = cost;
+            current_spell->cost = cost;
         }
         else if (strncmp(line, "TARGET ", 7) == 0)
         {

@@ -1,46 +1,46 @@
 SPELL    Heal
- TARGET  SELF
-  HEAL   2
-  EFFECT REGEN 2
  TAG     LIGHT
+ COST    1
+ TARGET  SELF
+  EFFECT REGEN 3
 
 SPELL    Firebolt
+ COST    1
+ TAG     FIRE
  TARGET  ENEMY
   DMG    2
   EFFECT BURN 2
- COST    1
- TAG     FIRE
 
 SPELL    Stoneskin
- TARGET  SELF
-  EFFECT FORTIFY 3
  COST    1
  TAG     EARTH
+ TARGET  SELF
+  EFFECT FORTIFY 3
 
 SPELL Magic Missile
- TARGET ENEMY
-  DMG 1
- TARGET ENEMY
-  DMG 1
- TARGET ENEMY
-  DMG 1
- COST 1
  TAG  ARCANE
+ COST 1
+ TARGET ENEMY
+  DMG 1
+ TARGET ENEMY
+  DMG 1
+ TARGET ENEMY
+  DMG 1
 
 SPELL    Venom Touch
+ TAG     POISON
+ COST    1
  TARGET  ENEMY
   DMG    1
   EFFECT WEAK   2
   EFFECT POISON 3
- COST    1
- TAG     POISON
 
 SPELL    Mass Restoration
+ TAG     LIGHT
+ COST    2
  EACH    ALLY
   HEAL   2
   EFFECT FORTIFY 2
- COST    2
- TAG     LIGHT
 
 ROOM    Entrance Hall
  DESC   A cold stone chamber with dripping moss.
