@@ -76,21 +76,21 @@ ROOM    Armory
   DEF   2
  EXIT   WEST Great Hall
 
-ROOM      Chapel
- DESC     A quiet place, scorched by dark rituals.
- ITEM     Healing Potion
-  CONSUME Heal
- ITEM     Silver Circlet
-  EQUIP   HEAD
-  MANA    1
-  GRANTS  Firebolt
- ENEMY    Cult Acolyte
-  HP      3
-  ATK     1
-  DEF     1
- EXIT     SOUTH Great Hall
- EXIT     EAST  Crypt
-  KEY     Crypt Key
+ROOM       Chapel
+ DESC      A quiet place, scorched by dark rituals.
+ ITEM      Silver Circlet
+  EQUIP    HEAD
+  MANA     1
+  GRANTS   Firebolt
+ ENEMY     Cult Acolyte
+  HP       3
+  ATK      1
+  DEF      1
+  DROP     Healing Potion
+   CONSUME Heal
+ EXIT      SOUTH Great Hall
+ EXIT      EAST  Crypt
+  KEY      Crypt Key
 
 ROOM     Crypt
  DESC    Cracked stone coffins and stale air.
@@ -101,7 +101,7 @@ ROOM     Crypt
   GRANTS Magic Missile
  ITEM    Tattered Robes
   EQUIP  CHEST
-  MANA   3
+  MANA   1
  ENEMY   Skeleton
   HP     3
   ATK    1
@@ -130,6 +130,6 @@ ROOM    Barracks
   DEF   3
  ENEMY  Goblin Captain
   HP    5
-  ATK   3
+  ATK   5
   DEF   1
  EXIT   WEST Crypt

@@ -18,9 +18,9 @@ Entrance Hall
 Enemies:
  Goblin Scout (2/2 HP, 1 ATK, 0 DEF)
 Items:
- Rusty Sword (weapon: +2 ATK)
- Silver Circlet (head: +1 MANA <Firebolt>)
- Healing Potion (consume: <Heal>)
+ Rusty Sword (weapon: +2 ATK.)
+ Silver Circlet (head: +1 MANA. <Firebolt>.)
+ Healing Potion (consume: <Heal>.)
 Exits:
  north: Great Hall
 ```
@@ -188,13 +188,17 @@ A piece of equipment with `ATK {amount}`, `DEF {amount}`, or `MANA {amount}` inc
 ### Enemies
 
 ```
-ENEMY  Cult Acolyte
-  HP   3
-  ATK  1
-  DEF  1
+ENEMY      Cult Acolyte
+  HP       3
+  ATK      1
+  DEF      1
+  DROP     Healing Potion
+   CONSUME Heal
 ```
 
 An enemy block starts with its name. This is used by the player to target the enemy for spells and attacks, so it should be unique within the room. Then, the enemy's HP, ATK, and DEF stats are specified. These are all optional, and the defaults are 1 HP, 1 ATK, and 0 DEF.
+
+Finally, you can add drops. These are placed in the room when the enemy dies. They have all the same attributes as items.
 
 ### Exits
 

@@ -46,6 +46,7 @@ struct EnemyTmp
     int def;
     int mana;
     struct EnemyTmp *next;
+    struct ItemTmp *drops;
 };
 
 struct ItemTmp
@@ -154,24 +155,6 @@ void copy_spell(struct Spell *spell, struct SpellTmp *spell_tmp)
     }
 }
 
-struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp)
-{
-    struct Enemy *enemy = malloc(sizeof(struct Enemy));
-    strncpy(enemy->stats.name, enemy_tmp->name, 32);
-    enemy->stats.burn = 0;
-    enemy->stats.fortify = 0;
-    enemy->stats.poison = 0;
-    enemy->stats.rage = 0;
-    enemy->stats.regen = 0;
-    enemy->stats.stun = 0;
-    enemy->stats.hp = enemy_tmp->hp;
-    enemy->stats.max_hp = enemy_tmp->hp;
-    enemy->stats.atk = enemy_tmp->atk;
-    enemy->stats.def = enemy_tmp->def;
-    enemy->stats.mana = enemy_tmp->mana;
-    return enemy;
-}
-
 struct Item *copy_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     struct Item *item = malloc(sizeof(struct Item));
@@ -201,6 +184,32 @@ struct Item *copy_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct
     return item;
 }
 
+struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    struct Enemy *enemy = malloc(sizeof(struct Enemy));
+    strncpy(enemy->stats.name, enemy_tmp->name, 32);
+    enemy->stats.burn = 0;
+    enemy->stats.fortify = 0;
+    enemy->stats.poison = 0;
+    enemy->stats.rage = 0;
+    enemy->stats.regen = 0;
+    enemy->stats.stun = 0;
+    enemy->stats.hp = enemy_tmp->hp;
+    enemy->stats.max_hp = enemy_tmp->hp;
+    enemy->stats.atk = enemy_tmp->atk;
+    enemy->stats.def = enemy_tmp->def;
+    enemy->stats.mana = enemy_tmp->mana;
+    enemy->drops = 0;
+    for (struct ItemTmp *item_tmp = enemy_tmp->drops; item_tmp != 0; item_tmp = item_tmp->next)
+    {
+        struct Item *item = copy_item(item_tmp, dungeon, dungeon_tmp);
+        // hook into the linked list
+        item->next = enemy->drops;
+        enemy->drops = item;
+    }
+    return enemy;
+}
+
 void copy_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     // start with an empty list
@@ -212,7 +221,7 @@ void copy_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dung
     // move over the enemies
     for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
     {
-        struct Enemy *enemy = copy_enemy(enemy_tmp);
+        struct Enemy *enemy = copy_enemy(enemy_tmp, dungeon, dungeon_tmp);
         enemy->next = room->enemies;
         room->enemies = enemy;
     }
@@ -446,6 +455,27 @@ struct Dungeon *load_dungeon(char *filename)
             current_item->next = current_room->items;
             current_room->items = current_item;
         }
+        else if (strncmp(line, "DROP ", 5) == 0)
+        {
+            line = trim_wspace(line + 5);
+            if (current_enemy == 0)
+            {
+                printf("ERROR: Attempt to add dropped item `%s` without enemy.\n", line);
+                continue;
+            }
+            current_item = malloc(sizeof(struct ItemTmp));
+            // copy the item name
+            strncpy(current_item->name, line, 32);
+            // add the default values
+            current_item->atk = 0;
+            current_item->def = 0;
+            current_item->mana = 0;
+            current_item->grants = 0;
+            current_item->type = IT_DEFAULT;
+            // hook up to the linked list
+            current_item->next = current_enemy->drops;
+            current_enemy->drops = current_item;
+        }
         else if (strncmp(line, "GRANTS ", 7) == 0)
         {
             line = trim_wspace(line + 7);
@@ -521,19 +551,22 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add enemy without room: `%s`", line);
                 continue;
             }
+            // update parser state
             current_exit = 0;
             current_item = 0;
             current_enemy =
                 malloc(sizeof(struct EnemyTmp));
             // copy the enemy name
             strncpy(current_enemy->name, line, 32);
-            // hook up to the linked list
-            current_enemy->next = current_room->enemies;
-            current_room->enemies = current_enemy;
+            // initialize default values
             current_enemy->hp = 1;
             current_enemy->atk = 1;
             current_enemy->def = 0;
             current_enemy->mana = 0;
+            current_enemy->drops = 0;
+            // hook up to the linked list
+            current_enemy->next = current_room->enemies;
+            current_room->enemies = current_enemy;
         }
         else if (strncmp(line, "HP ", 3) == 0)
         {

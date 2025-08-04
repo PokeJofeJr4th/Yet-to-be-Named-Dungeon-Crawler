@@ -71,6 +71,7 @@ struct Enemy
 {
     struct Combatant stats;
     struct Enemy *next;
+    struct Item *drops;
 };
 
 enum ItemType

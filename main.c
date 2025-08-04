@@ -118,21 +118,13 @@ void print_item(struct Item *i)
     {
         printf(" (%s:", fmt_item_type(i->type));
         if (i->atk != 0)
-        {
-            printf(" %+i ATK", i->atk);
-        }
+            printf(" %+i ATK.", i->atk);
         if (i->def != 0)
-        {
-            printf(" %+i DEF", i->def);
-        }
+            printf(" %+i DEF.", i->def);
         if (i->mana != 0)
-        {
-            printf(" %+i MANA", i->mana);
-        }
+            printf(" %+i MANA.", i->mana);
         if (i->grants != 0)
-        {
-            printf(" <%s>", i->grants->name);
-        }
+            printf(" <%s>.", i->grants->name);
         printf(")");
     }
     printf("\n");
@@ -286,7 +278,6 @@ int main(int argc, char **argv)
             else
             {
                 printf("Unknown direction: `%s`\n", input);
-                confirm();
                 continue;
             }
             struct Room *new_room = 0;
@@ -304,7 +295,6 @@ int main(int argc, char **argv)
             if (new_room == 0)
             {
                 printf("No exit %s\n", fmt_dir(dir));
-                confirm();
                 continue;
             }
             if (key != 0)
@@ -485,7 +475,6 @@ int main(int argc, char **argv)
         else if (strncmp(cmd_buffer, "fight ", 5) == 0)
         {
             char *enemy_name = trim_wspace(cmd_buffer + 5);
-            struct Enemy *prev = 0;
             int found = 0;
             for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
             {
@@ -494,14 +483,6 @@ int main(int argc, char **argv)
                     fight(&player.stats, &enemy->stats);
                     found = 1;
                     confirm();
-                    if (enemy->stats.hp <= 0)
-                    {
-                        if (prev == 0)
-                            room->enemies = enemy->next;
-                        else
-                            prev->next = enemy->next;
-                        free(enemy);
-                    }
                     break;
                 }
             }
@@ -623,6 +604,17 @@ int main(int argc, char **argv)
             if (enemy->stats.hp <= 0)
             {
                 printf("%s has perished.\n", enemy->stats.name);
+                confirm();
+                if (enemy->drops != 0)
+                {
+                    // find the end of the list of enemy drops
+                    struct Item *last = enemy->drops;
+                    while (last->next != 0)
+                        last = last->next;
+                    // prepend the list of enemy drops to the list of items in the room
+                    last->next = room->items;
+                    room->items = enemy->drops;
+                }
                 if (prev == 0)
                 {
                     room->enemies = enemy->next;
