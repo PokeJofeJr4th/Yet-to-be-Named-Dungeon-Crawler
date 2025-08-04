@@ -96,6 +96,242 @@ char *trim_wspace(char *p)
     return --p;
 }
 
+struct RoomTmp *new_room(char *name)
+{
+    // allocate space for the new room
+    struct RoomTmp *room = malloc(sizeof(struct RoomTmp));
+    // initialize all the other fields
+    room->num_exits = 0;
+    room->num_tags = 0;
+    room->enemies = 0;
+    room->exits = 0;
+    room->items = 0;
+    room->tags = 0;
+    // copy the name over
+    strncpy(room->name, name, 32);
+    // set an empty description
+    room->desc[0] = 0;
+    return room;
+}
+
+void copy_spell(struct Spell *spell, struct SpellTmp *spell_tmp)
+{
+
+    // move over the trivial fields (cost+name)
+    spell->cost = spell_tmp->cost;
+    strcpy(spell->name, spell_tmp->name);
+    // move over the target blocks
+    spell->num_targets = spell_tmp->num_targets;
+    spell->targets = malloc(sizeof(struct SpellTarget) * spell->num_targets);
+    struct SpellTarget *target = spell->targets;
+    for (struct SpellTargetTmp *target_tmp = spell_tmp->targets; target_tmp != 0; target_tmp = target_tmp->next)
+    {
+        // copy over the target type
+        target->type = target_tmp->type;
+        // move over the effects
+        target->num_effects = target_tmp->num_effects;
+        target->effects = malloc(sizeof(struct SpellEffect) * target_tmp->num_effects);
+        struct SpellEffect *effect = target->effects;
+        for (struct SpellEffectTmp *effect_tmp = target_tmp->effects; effect_tmp != 0; effect_tmp = effect_tmp->next)
+        {
+            // copy over the fields
+            effect->amount = effect_tmp->amount;
+            effect->type = effect_tmp->type;
+            // go to the next effect in the array
+            effect++;
+        }
+        // go to the next target block in the array
+        target++;
+    }
+    // move over the tags
+    spell->num_tags = spell_tmp->num_tags;
+    spell->tags = malloc(sizeof(char *) * spell->num_tags);
+    char **tag = spell->tags;
+    for (struct TagTmp *tag_tmp = spell_tmp->tags; tag_tmp != 0; tag_tmp = tag_tmp->next)
+    {
+        *tag = strdup(tag_tmp->tag);
+        tag++;
+    }
+}
+
+struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp)
+{
+    struct Enemy *enemy = malloc(sizeof(struct Enemy));
+    strncpy(enemy->stats.name, enemy_tmp->name, 32);
+    enemy->stats.burn = 0;
+    enemy->stats.fortify = 0;
+    enemy->stats.poison = 0;
+    enemy->stats.rage = 0;
+    enemy->stats.regen = 0;
+    enemy->stats.stun = 0;
+    enemy->stats.hp = enemy_tmp->hp;
+    enemy->stats.max_hp = enemy_tmp->hp;
+    enemy->stats.atk = enemy_tmp->atk;
+    enemy->stats.def = enemy_tmp->def;
+    enemy->stats.mana = enemy_tmp->mana;
+    return enemy;
+}
+
+struct Item *copy_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    struct Item *item = malloc(sizeof(struct Item));
+    strncpy(item->name, item_tmp->name, 32);
+    item->atk = item_tmp->atk;
+    item->def = item_tmp->def;
+    item->mana = item_tmp->mana;
+    item->type = item_tmp->type;
+    item->grants = 0;
+    if (item_tmp->grants != 0)
+    {
+        int i = 0;
+        for (struct SpellTmp *spell = dungeon_tmp->spells; spell != 0; spell = spell->next)
+        {
+            if (strcmp(spell->name, item_tmp->grants) == 0)
+            {
+                item->grants = dungeon->spells + i;
+                break;
+            }
+            i++;
+        }
+        if (item->grants == 0)
+        {
+            printf("ERROR: Failed to find spell `%s`, granted by item `%s`\n", item_tmp->grants, item_tmp->name);
+        }
+    }
+    return item;
+}
+
+void copy_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    // start with an empty list
+    room->enemies = 0;
+    room->items = 0;
+    // move over the name and description
+    strncpy(room->name, room_tmp->name, 32);
+    strncpy(room->desc, room_tmp->desc, 128);
+    // move over the enemies
+    for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
+    {
+        struct Enemy *enemy = copy_enemy(enemy_tmp);
+        enemy->next = room->enemies;
+        room->enemies = enemy;
+    }
+    // move over the exits
+    room->num_exits = room_tmp->num_exits;
+    room->exits = malloc(sizeof(struct Exit) * room->num_exits);
+    struct Exit *exit = room->exits;
+    for (struct ExitTmp *exit_tmp = room_tmp->exits; exit_tmp != 0; exit_tmp = exit_tmp->next)
+    {
+        exit->dir = exit_tmp->exit_dir;
+        exit->key = exit_tmp->key;
+        // default room in case something goes wrong
+        exit->room = 0;
+        // find the ID of the room the exit is going to
+        int i = 0;
+        for (struct RoomTmp *room_candidate = dungeon_tmp->rooms; room_candidate != 0; room_candidate = room_candidate->next)
+        {
+            if (strcmp(exit_tmp->exit_to, room_candidate->name) == 0)
+            {
+                exit->room = &dungeon->rooms[i];
+                break;
+            }
+            i++;
+        }
+        if (exit->room == 0)
+            printf("ERROR: Can't find room %s (linking exits for %s)\n", exit_tmp->exit_to, room_tmp->name);
+        exit++;
+    }
+    // move over the items
+    for (struct ItemTmp *item_tmp = room_tmp->items; item_tmp != 0; item_tmp = item_tmp->next)
+    {
+        struct Item *item = copy_item(item_tmp, dungeon, dungeon_tmp);
+        item->next = room->items;
+        room->items = item;
+    }
+    // move over the tags
+    room->num_tags = room_tmp->num_tags;
+    room->tags = malloc(sizeof(char *) * room->num_tags);
+    char **tag = room->tags;
+    for (struct TagTmp *tag_tmp = room_tmp->tags; tag_tmp != 0; tag_tmp = tag_tmp->next)
+    {
+        *tag = strdup(tag_tmp->tag);
+        tag++;
+    }
+}
+
+struct Dungeon *copy_dungeon(struct DungeonTmp *dungeon_tmp)
+{
+    // allocate the dungeon with enough space to store all the rooms
+    struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * dungeon_tmp->num_rooms);
+
+    dungeon->num_spells = dungeon_tmp->num_spells;
+    dungeon->spells = malloc(sizeof(struct Spell) * dungeon_tmp->num_spells);
+    // loop through the spells of the tmp and final dungeon in parallel
+    struct Spell *spell = dungeon->spells;
+    for (struct SpellTmp *spell_tmp = dungeon_tmp->spells; spell_tmp != 0; spell_tmp = spell_tmp->next)
+        copy_spell(spell++, spell_tmp);
+    dungeon->num_rooms = dungeon_tmp->num_rooms;
+    // loop through the rooms of the tmp and final dungeon in parallel
+    struct Room *room = dungeon->rooms;
+    for (struct RoomTmp *room_tmp = dungeon_tmp->rooms; room_tmp != 0; room_tmp = room_tmp->next)
+        copy_room(room++, room_tmp, dungeon, dungeon_tmp);
+    for (struct RoomTmp *room = dungeon_tmp->rooms; room != 0;)
+    {
+        for (struct ExitTmp *exit = room->exits; exit != 0;)
+        {
+            struct ExitTmp *nxt = exit->next;
+            free(exit);
+            exit = nxt;
+        }
+        for (struct EnemyTmp *enemy = room->enemies; enemy != 0;)
+        {
+            struct EnemyTmp *nxt = enemy->next;
+            free(enemy);
+            enemy = nxt;
+        }
+        for (struct ItemTmp *item = room->items; item != 0;)
+        {
+            struct ItemTmp *nxt = item->next;
+            free(item);
+            item = nxt;
+        }
+        for (struct TagTmp *tag = room->tags; tag != 0;)
+        {
+            struct TagTmp *nxt = tag->next;
+            free(tag);
+            tag = nxt;
+        }
+        struct RoomTmp *r = room->next;
+        free(room);
+        room = r;
+    }
+    for (struct SpellTmp *spell = dungeon_tmp->spells; spell != 0;)
+    {
+        for (struct SpellTargetTmp *target = spell->targets; target != 0;)
+        {
+            for (struct SpellEffectTmp *effect = target->effects; effect != 0;)
+            {
+                struct SpellEffectTmp *e = effect->next;
+                free(effect);
+                effect = e;
+            }
+            struct SpellTargetTmp *t = target->next;
+            free(target);
+            target = t;
+        }
+        for (struct TagTmp *tag = spell->tags; tag != 0;)
+        {
+            struct TagTmp *nxt = tag->next;
+            free(tag);
+            tag = nxt;
+        }
+        struct SpellTmp *s = spell->next;
+        free(spell);
+        spell = s;
+    }
+    return dungeon;
+}
+
 struct Dungeon *load_dungeon(char *filename)
 {
     struct DungeonTmp dungeon_tmp =
@@ -127,23 +363,12 @@ struct Dungeon *load_dungeon(char *filename)
             current_spell = 0;
             current_spell_target = 0;
             current_exit = 0;
-            dungeon_tmp.num_rooms++;
-            // allocate space for the new room
-            current_room = malloc(sizeof(struct RoomTmp));
+            // new room
+            current_room = new_room(trim_wspace(line + 5));
             // hook it up to the linked list
             current_room->next = dungeon_tmp.rooms;
             dungeon_tmp.rooms = current_room;
-            // initialize all the other fields
-            current_room->num_exits = 0;
-            current_room->num_tags = 0;
-            current_room->enemies = 0;
-            current_room->exits = 0;
-            current_room->items = 0;
-            current_room->tags = 0;
-            // copy the name over
-            strncpy(current_room->name, trim_wspace(line + 5), 32);
-            // set an empty description
-            current_room->desc[0] = 0;
+            dungeon_tmp.num_rooms++;
         }
         else if (strncmp(line, "EXIT ", 5) == 0)
         {
@@ -576,203 +801,5 @@ struct Dungeon *load_dungeon(char *filename)
         }
     }
     fclose(f);
-    // allocate the dungeon with enough space to store all the rooms
-    struct Dungeon *dungeon = malloc(sizeof(struct Dungeon) + sizeof(struct Room) * dungeon_tmp.num_rooms);
-
-    dungeon->num_spells = dungeon_tmp.num_spells;
-    dungeon->spells = malloc(sizeof(struct Spell) * dungeon_tmp.num_spells);
-    // loop through the spells of the tmp and final dungeon in parallel
-    struct Spell *spell = dungeon->spells;
-    for (struct SpellTmp *spell_tmp = dungeon_tmp.spells; spell_tmp != 0; spell_tmp = spell_tmp->next)
-    {
-        // move over the trivial fields (cost+name)
-        spell->cost = spell_tmp->cost;
-        strcpy(spell->name, spell_tmp->name);
-        // move over the target blocks
-        spell->num_targets = spell_tmp->num_targets;
-        spell->targets = malloc(sizeof(struct SpellTarget) * spell->num_targets);
-        struct SpellTarget *target = spell->targets;
-        for (struct SpellTargetTmp *target_tmp = spell_tmp->targets; target_tmp != 0; target_tmp = target_tmp->next)
-        {
-            // copy over the target type
-            target->type = target_tmp->type;
-            // move over the effects
-            target->num_effects = target_tmp->num_effects;
-            target->effects = malloc(sizeof(struct SpellEffect) * target_tmp->num_effects);
-            struct SpellEffect *effect = target->effects;
-            for (struct SpellEffectTmp *effect_tmp = target_tmp->effects; effect_tmp != 0; effect_tmp = effect_tmp->next)
-            {
-                // copy over the fields
-                effect->amount = effect_tmp->amount;
-                effect->type = effect_tmp->type;
-                // go to the next effect in the array
-                effect++;
-            }
-            // go to the next target block in the array
-            target++;
-        }
-        // move over the tags
-        spell->num_tags = spell_tmp->num_tags;
-        spell->tags = malloc(sizeof(char *) * spell->num_tags);
-        char **tag = spell->tags;
-        for (struct TagTmp *tag_tmp = spell_tmp->tags; tag_tmp != 0; tag_tmp = tag_tmp->next)
-        {
-            *tag = strdup(tag_tmp->tag);
-            tag++;
-        }
-        // go to the next spell in the array
-        spell++;
-    }
-    dungeon->num_rooms = dungeon_tmp.num_rooms;
-    // loop through the rooms of the tmp and final dungeon in parallel
-    struct Room *room = dungeon->rooms;
-    for (struct RoomTmp *room_tmp = dungeon_tmp.rooms; room_tmp != 0; room_tmp = room_tmp->next)
-    {
-        // start with an empty list
-        room->enemies = 0;
-        room->items = 0;
-        // move over the name and description
-        strncpy(room->name, room_tmp->name, 32);
-        strncpy(room->desc, room_tmp->desc, 128);
-        // move over the enemies
-        for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
-        {
-            struct Enemy *enemy = malloc(sizeof(struct Enemy));
-            strncpy(enemy->stats.name, enemy_tmp->name, 32);
-            enemy->stats.burn = 0;
-            enemy->stats.fortify = 0;
-            enemy->stats.poison = 0;
-            enemy->stats.rage = 0;
-            enemy->stats.regen = 0;
-            enemy->stats.stun = 0;
-            enemy->stats.hp = enemy_tmp->hp;
-            enemy->stats.max_hp = enemy_tmp->hp;
-            enemy->stats.atk = enemy_tmp->atk;
-            enemy->stats.def = enemy_tmp->def;
-            enemy->stats.mana = enemy_tmp->mana;
-            enemy->next = room->enemies;
-            room->enemies = enemy;
-        }
-        // move over the exits
-        room->num_exits = room_tmp->num_exits;
-        room->exits = malloc(sizeof(struct Exit) * room->num_exits);
-        struct Exit *exit = room->exits;
-        for (struct ExitTmp *exit_tmp = room_tmp->exits; exit_tmp != 0; exit_tmp = exit_tmp->next)
-        {
-            exit->dir = exit_tmp->exit_dir;
-            exit->key = exit_tmp->key;
-            // default room in case something goes wrong
-            exit->room = 0;
-            // find the ID of the room the exit is going to
-            int i = 0;
-            for (struct RoomTmp *room_candidate = dungeon_tmp.rooms; room_candidate != 0; room_candidate = room_candidate->next)
-            {
-                if (strcmp(exit_tmp->exit_to, room_candidate->name) == 0)
-                {
-                    exit->room = &dungeon->rooms[i];
-                    break;
-                }
-                i++;
-            }
-            if (exit->room == 0)
-                printf("ERROR: Can't find room %s (linking exits for %s)\n", exit_tmp->exit_to, room_tmp->name);
-            exit++;
-        }
-        // move over the items
-        for (struct ItemTmp *item_tmp = room_tmp->items; item_tmp != 0; item_tmp = item_tmp->next)
-        {
-            struct Item *item = malloc(sizeof(struct Item));
-            strncpy(item->name, item_tmp->name, 32);
-            item->atk = item_tmp->atk;
-            item->def = item_tmp->def;
-            item->mana = item_tmp->mana;
-            item->type = item_tmp->type;
-            item->next = room->items;
-            item->grants = 0;
-            if (item_tmp->grants != 0)
-            {
-                int i = 0;
-                for (struct SpellTmp *spell = dungeon_tmp.spells; spell != 0; spell = spell->next)
-                {
-                    if (strcmp(spell->name, item_tmp->grants) == 0)
-                    {
-                        item->grants = dungeon->spells + i;
-                        break;
-                    }
-                    i++;
-                }
-                if (item->grants == 0)
-                {
-                    printf("ERROR: Failed to find spell `%s`, granted by item `%s`\n", item_tmp->grants, item_tmp->name);
-                }
-            }
-            room->items = item;
-        }
-        // move over the tags
-        room->num_tags = room_tmp->num_tags;
-        room->tags = malloc(sizeof(char *) * room->num_tags);
-        char **tag = room->tags;
-        for (struct TagTmp *tag_tmp = room_tmp->tags; tag_tmp != 0; tag_tmp = tag_tmp->next)
-        {
-            *tag = strdup(tag_tmp->tag);
-            tag++;
-        }
-        // go to the next room in the array
-        room++;
-    }
-    for (struct RoomTmp *room = dungeon_tmp.rooms; room != 0;)
-    {
-        for (struct ExitTmp *exit = room->exits; exit != 0;)
-        {
-            struct ExitTmp *nxt = exit->next;
-            free(exit);
-            exit = nxt;
-        }
-        for (struct EnemyTmp *enemy = room->enemies; enemy != 0;)
-        {
-            struct EnemyTmp *nxt = enemy->next;
-            free(enemy);
-            enemy = nxt;
-        }
-        for (struct ItemTmp *item = room->items; item != 0;)
-        {
-            struct ItemTmp *nxt = item->next;
-            free(item);
-            item = nxt;
-        }
-        for (struct TagTmp *tag = room->tags; tag != 0;)
-        {
-            struct TagTmp *nxt = tag->next;
-            free(tag);
-            tag = nxt;
-        }
-        struct RoomTmp *r = room->next;
-        free(room);
-        room = r;
-    }
-    for (struct SpellTmp *spell = dungeon_tmp.spells; spell != 0;)
-    {
-        for (struct SpellTargetTmp *target = spell->targets; target != 0;)
-        {
-            for (struct SpellEffectTmp *effect = target->effects; effect != 0;)
-            {
-                struct SpellEffectTmp *e = effect->next;
-                free(effect);
-                effect = e;
-            }
-            struct SpellTargetTmp *t = target->next;
-            free(target);
-            target = t;
-        }
-        for (struct TagTmp *tag = spell->tags; tag != 0;)
-        {
-            struct TagTmp *nxt = tag->next;
-            free(tag);
-            tag = nxt;
-        }
-        struct SpellTmp *s = spell->next;
-        free(spell);
-        spell = s;
-    }
-    return dungeon;
+    return copy_dungeon(&dungeon_tmp);
 }

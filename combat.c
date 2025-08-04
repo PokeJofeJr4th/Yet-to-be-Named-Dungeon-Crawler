@@ -136,7 +136,7 @@ void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Comb
             }
             break;
         default:
-            // TODO
+            // TODO?
             break;
         }
     }

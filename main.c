@@ -445,9 +445,7 @@ int main(int argc, char **argv)
                 prev = item;
             }
             if (found_item)
-            {
                 update_stats(&player);
-            }
             else
             {
                 printf("Failed to find item: `%s`\n", item_name);
@@ -618,11 +616,6 @@ int main(int argc, char **argv)
             printf("Unknown command\n");
             continue;
         }
-        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-        {
-            fight(&enemy->stats, &player.stats);
-            confirm();
-        }
         struct Enemy *prev = 0;
         for (struct Enemy *enemy = room->enemies; enemy != 0;)
         {
@@ -650,6 +643,11 @@ int main(int argc, char **argv)
             }
         }
         tick(&player.stats);
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+        {
+            fight(&enemy->stats, &player.stats);
+            confirm();
+        }
         if (player.stats.hp <= 0)
         {
             printf("%s has perished.\n", player.stats.name);
