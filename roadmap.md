@@ -31,7 +31,3 @@ Allow equipment to cast spells when you attack (weapons) or when you are attacke
 ### Spell Tags
 
 Enemies and armor can have resistance to certain spell tags, lowering their effectiveness. Equipment can have affinity/synergy with spell tags, boosting their effectiveness.
-
-### Locked Doors
-
-Some exits will require certain items to open.
