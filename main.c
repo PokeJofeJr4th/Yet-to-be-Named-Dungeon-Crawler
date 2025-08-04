@@ -275,13 +275,13 @@ int main(int argc, char **argv)
         {
             enum Direction dir;
             char *input = trim_wspace(cmd_buffer + 5);
-            if (stricmp(input, "north") == 0)
+            if (strcmp(input, "north") == 0)
                 dir = DIR_NORTH;
-            else if (stricmp(input, "south") == 0)
+            else if (strcmp(input, "south") == 0)
                 dir = DIR_SOUTH;
-            else if (stricmp(input, "east") == 0)
+            else if (strcmp(input, "east") == 0)
                 dir = DIR_EAST;
-            else if (stricmp(input, "west") == 0)
+            else if (strcmp(input, "west") == 0)
                 dir = DIR_WEST;
             else
             {

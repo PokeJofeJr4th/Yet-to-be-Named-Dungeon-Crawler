@@ -250,17 +250,17 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: An item may only be marked with one EQUIP or CONSUME.\n");
                 continue;
             }
-            if (stricmp(line, "HEAD") == 0)
+            if (strcmp(line, "HEAD") == 0)
                 current_item->type = IT_ARMOR_HEAD;
-            else if (stricmp(line, "CHEST") == 0)
+            else if (strcmp(line, "CHEST") == 0)
                 current_item->type = IT_ARMOR_CHEST;
-            else if (stricmp(line, "LEGS") == 0)
+            else if (strcmp(line, "LEGS") == 0)
                 current_item->type = IT_ARMOR_LEGS;
-            else if (stricmp(line, "FEET") == 0)
+            else if (strcmp(line, "FEET") == 0)
                 current_item->type = IT_ARMOR_FEET;
-            else if (stricmp(line, "WEAPON") == 0)
+            else if (strcmp(line, "WEAPON") == 0)
                 current_item->type = IT_WEAPON;
-            else if (stricmp(line, "SHIELD") == 0)
+            else if (strcmp(line, "SHIELD") == 0)
                 current_item->type = IT_SHIELD;
             else
             {
@@ -644,7 +644,7 @@ struct Dungeon *load_dungeon(char *filename)
             int i = 0;
             for (struct RoomTmp *room_candidate = dungeon_tmp.rooms; room_candidate != 0; room_candidate = room_candidate->next)
             {
-                if (stricmp(exit_tmp->exit_to, room_candidate->name) == 0)
+                if (strcmp(exit_tmp->exit_to, room_candidate->name) == 0)
                 {
                     exit->room = i;
                     break;
