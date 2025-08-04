@@ -237,9 +237,13 @@ void print_spell(struct Spell *spell)
     }
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    struct Dungeon *dungeon = load_dungeon("example.txt");
+    struct Dungeon *dungeon;
+    if (argc == 1)
+        dungeon = load_dungeon("example.txt");
+    else
+        dungeon = load_dungeon(argv[1]);
     struct Room *room = 0;
     struct Player player;
     init_player(&player);

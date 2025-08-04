@@ -2,6 +2,8 @@
 
 ## How to Play
 
+Once it's all compiled (see Makefile), use `./dungeon.exe` to run the default dungeon, or `./dungeon.exe my_dungeon.txt` if you make your own or download somebody else's.
+
 This is a command-based game. Upon loading into the world, you will see the output of the `look` command. You should familiarize yourself with the following actions you can take in the game.
 
 ### Look
