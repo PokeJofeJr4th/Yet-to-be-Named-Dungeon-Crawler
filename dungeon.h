@@ -98,7 +98,8 @@ struct Item
 
 struct Exit
 {
-    int room;
+    struct Room *room;
+    char *key;
     enum Direction dir;
 };
 

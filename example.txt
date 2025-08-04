@@ -90,6 +90,7 @@ ROOM      Chapel
   DEF     1
  EXIT     SOUTH Great Hall
  EXIT     EAST  Crypt
+  KEY     Crypt Key
 
 ROOM     Crypt
  DESC    Cracked stone coffins and stale air.
@@ -105,10 +106,12 @@ ROOM     Crypt
   HP     3
   ATK    1
  EXIT    WEST Chapel
+  KEY    Crypt Key
  EXIT    EAST Barracks
 
 ROOM    Kitchen
  DESC   Rotten food and shattered dishes cover the floor.
+ ITEM   Crypt Key
  ITEM   Iron Boots
   EQUIP FEET
   DEF   1

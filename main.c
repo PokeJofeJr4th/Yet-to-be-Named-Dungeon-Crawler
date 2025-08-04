@@ -160,7 +160,7 @@ void print_room(struct Room *room, struct Dungeon *dungeon)
     {
         printf("Exits:\n");
         for (int i = 0; i < room->num_exits; i++)
-            printf(" %s: %s\n", fmt_dir(room->exits[i].dir), dungeon->rooms[room->exits[i].room].name);
+            printf(" %s: %s\n", fmt_dir(room->exits[i].dir), room->exits[i].room->name);
     }
 }
 
@@ -289,24 +289,42 @@ int main(int argc, char **argv)
                 confirm();
                 continue;
             }
-            int new_room = -1;
+            struct Room *new_room = 0;
+            char *key = 0;
             for (int i = 0; i < room->num_exits; i++)
             {
                 struct Exit e = room->exits[i];
                 if (e.dir == dir)
                 {
-                    new_room = room->exits[i].room;
+                    new_room = e.room;
+                    key = e.key;
                     break;
                 }
             }
-            if (new_room == -1)
+            if (new_room == 0)
             {
                 printf("No exit %s\n", fmt_dir(dir));
                 confirm();
                 continue;
             }
-            else
-                room = &dungeon->rooms[new_room];
+            if (key != 0)
+            {
+                int key_found = 0;
+                for (struct Item *item = player.inventory; item != 0; item = item->next)
+                {
+                    if (strcmp(item->name, key) == 0)
+                    {
+                        key_found = 1;
+                        break;
+                    }
+                }
+                if (key_found == 0)
+                {
+                    printf("That exit is locked. Find %s.\n", key);
+                    continue;
+                }
+            }
+            room = new_room;
         }
         else if (strncmp(cmd_buffer, "take ", 5) == 0)
         {

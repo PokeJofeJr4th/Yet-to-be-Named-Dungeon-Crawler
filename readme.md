@@ -31,7 +31,7 @@ You can use the other commands to fight enemies, interact with items, and explor
 
 Ex. `move north`
 
-Moves your character through an exit in the specified direction. The direction must correspond to an exit shown in the current room.
+Moves your character through an exit in the specified direction. The direction must correspond to an exit shown in the current room. If a room is locked, you won't be able to move through until you have the key in your inventory.
 
 ### Take/Drop
 
@@ -200,6 +200,9 @@ An enemy block starts with its name. This is used by the player to target the en
 
 ```
 EXIT EAST Crypt
+ KEY Crypt Key
 ```
 
 An exit follows the pattern `EXIT {DIRECTION} {Room Name}`. The direction must be one of `NORTH`, `SOUTH`, `EAST`, and `WEST`. There can only be one exit in each direction. It is highly recommended to add exits in pairs between adjacent rooms; if room A has `EXIT SOUTH B`, room B should have `EXIT NORTH A`.
+
+An exit with a key checks if an item with the specified name is in the player's inventory before allowing them through. It is recommended to add a key to both sides of an exit to prevent the player from getting stuck. Make sure you put the key somewhere accessible, and don't make it equipment or consumable.
