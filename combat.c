@@ -68,27 +68,33 @@ void apply_effect(struct SpellEffect *effect, int mana, struct Combatant *target
     {
     case SE_BURN:
         target->burn += magnitude;
+        printf("%s gains Burn %i.\n", target->name, magnitude);
         break;
     case SE_FORTIFY:
         target->fortify += magnitude;
+        printf("%s gains Fortify %i.\n", target->name, magnitude);
         break;
     case SE_HEAL:
-        heal(target, magnitude);
+        printf("%s regains %i HP.\n", target->name, heal(target, magnitude));
         break;
     case SE_POISON:
         target->poison += magnitude;
+        printf("%s gains Poison %i.\n", target->name, magnitude);
         break;
     case SE_REGEN:
         target->regen += magnitude;
+        printf("%s gains Regeneration %i.\n", target->name, magnitude);
         break;
     case SE_STUN:
         target->stun += magnitude;
+        printf("%s gains Stunned %i.\n", target->name, magnitude);
         break;
     case SE_WEAK:
         target->rage -= magnitude;
+        printf("%s gains Weakness %i.\n", target->name, magnitude);
         break;
     case SE_DMG:
-        take_damage(target, magnitude);
+        printf("%s takes %i damage.\n", target->name, take_damage(target, magnitude));
         break;
     default:
         break;
