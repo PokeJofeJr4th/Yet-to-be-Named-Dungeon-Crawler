@@ -33,6 +33,7 @@ struct SpellTmp
 struct ExitTmp
 {
     char exit_to[32];
+    char *key;
     struct ExitTmp *next;
     enum Direction exit_dir;
 };
@@ -111,6 +112,7 @@ struct Dungeon *load_dungeon(char *filename)
     struct SpellTmp *current_spell = 0;
     struct SpellTargetTmp *current_spell_target = 0;
     struct RoomTmp *current_room = 0;
+    struct ExitTmp *current_exit = 0;
 
     while (fgets(line_buffer, 128, f))
     {
@@ -124,6 +126,7 @@ struct Dungeon *load_dungeon(char *filename)
             current_item = 0;
             current_spell = 0;
             current_spell_target = 0;
+            current_exit = 0;
             dungeon_tmp.num_rooms++;
             // allocate space for the new room
             current_room = malloc(sizeof(struct RoomTmp));
@@ -178,16 +181,33 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Invalid direction: `%s`\n", line);
                 continue;
             }
-            struct ExitTmp *exit_tmp = malloc(sizeof(struct ExitTmp));
-            exit_tmp->exit_dir = dir;
-            strncpy(exit_tmp->exit_to, exit, 32);
-            exit_tmp->next = current_room->exits;
-            current_room->exits = exit_tmp;
+            current_exit = malloc(sizeof(struct ExitTmp));
+            current_exit->exit_dir = dir;
+            strncpy(current_exit->exit_to, exit, 32);
+            current_exit->key = 0;
+            // hook into the linked list
+            current_exit->next = current_room->exits;
+            current_room->exits = current_exit;
             current_room->num_exits++;
+        }
+        else if (strncmp(line, "KEY ", 4) == 0)
+        {
+            if (current_exit == 0)
+            {
+                printf("ERROR: Attempt to add KEY without an exit.\n");
+                continue;
+            }
+            if (current_exit->key != 0)
+            {
+                printf("ERROR: An exit may only have one key.\n");
+                continue;
+            }
+            current_exit->key = strdup(trim_wspace(line + 4));
         }
         else if (strncmp(line, "ITEM ", 5) == 0)
         {
             current_enemy = 0;
+            current_exit = 0;
             current_item = malloc(sizeof(struct ItemTmp));
             // copy the item name
             strncpy(current_item->name, trim_wspace(line + 5), 32);
@@ -276,6 +296,7 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add enemy without room: `%s`", line);
                 continue;
             }
+            current_exit = 0;
             current_item = 0;
             current_enemy =
                 malloc(sizeof(struct EnemyTmp));
@@ -370,6 +391,7 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "TAG ", 4) == 0)
         {
+            current_exit = 0;
             struct TagTmp *tag_tmp = malloc(sizeof(struct TagTmp));
             // copy the tag name
             strncpy(tag_tmp->tag, trim_wspace(line + 4), 16);
@@ -638,20 +660,21 @@ struct Dungeon *load_dungeon(char *filename)
         for (struct ExitTmp *exit_tmp = room_tmp->exits; exit_tmp != 0; exit_tmp = exit_tmp->next)
         {
             exit->dir = exit_tmp->exit_dir;
+            exit->key = exit_tmp->key;
             // default room in case something goes wrong
-            exit->room = -1;
+            exit->room = 0;
             // find the ID of the room the exit is going to
             int i = 0;
             for (struct RoomTmp *room_candidate = dungeon_tmp.rooms; room_candidate != 0; room_candidate = room_candidate->next)
             {
                 if (strcmp(exit_tmp->exit_to, room_candidate->name) == 0)
                 {
-                    exit->room = i;
+                    exit->room = &dungeon->rooms[i];
                     break;
                 }
                 i++;
             }
-            if (exit->room == -1)
+            if (exit->room == 0)
                 printf("ERROR: Can't find room %s (linking exits for %s)\n", exit_tmp->exit_to, room_tmp->name);
             exit++;
         }
