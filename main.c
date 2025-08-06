@@ -450,6 +450,25 @@ int main(int argc, char **argv)
                     fight(&player.stats, &enemy->stats);
                     found = 1;
                     confirm();
+                    for (int i = 0; i < enemy->num_abilities; i++)
+                    {
+                        struct Ability ability = enemy->abilities[i];
+                        if (ability.trigger != T_DEF)
+                            continue;
+                        resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, &player.stats, 0);
+                    }
+                    for (int i = 0; i < NUM_EQ_SLOTS; i++)
+                    {
+                        if (player.equipment[i].name[0] == 0)
+                            continue;
+                        for (int j = 0; j < player.equipment[i].num_abilities; j++)
+                        {
+                            struct Ability ability = player.equipment[i].abilities[i];
+                            if (ability.trigger != T_ATK)
+                                continue;
+                            resolve_ability(ability.result, player.stats.mana, room, &player.stats, &enemy->stats, 1);
+                        }
+                    }
                     break;
                 }
             }
@@ -558,6 +577,13 @@ int main(int argc, char **argv)
                     last->next = room->items;
                     room->items = enemy->drops;
                 }
+                for (int i = 0; i < enemy->num_abilities; i++)
+                {
+                    struct Ability ability = enemy->abilities[i];
+                    if (ability.trigger != T_DEATH)
+                        continue;
+                    resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, 0, 0);
+                }
                 if (prev == 0)
                 {
                     room->enemies = enemy->next;
@@ -586,10 +612,43 @@ int main(int argc, char **argv)
                 struct Ability ability = enemy->abilities[i];
                 if (ability.trigger != T_ATK)
                     continue;
-                // TODO: Resolve the ability
+                resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, &player.stats, 0);
             }
-
+            for (int i = 0; i < NUM_EQ_SLOTS; i++)
+            {
+                if (player.equipment[i].name[0] == 0)
+                    continue;
+                for (int j = 0; j < player.equipment[i].num_abilities; j++)
+                {
+                    struct Ability ability = player.equipment[i].abilities[i];
+                    if (ability.trigger != T_DEF)
+                        continue;
+                    resolve_ability(ability.result, player.stats.mana, room, &player.stats, &enemy->stats, 1);
+                }
+            }
             confirm();
+        }
+        for (int i = 0; i < NUM_EQ_SLOTS; i++)
+        {
+            if (player.equipment[i].name[0] == 0)
+                continue;
+            for (int j = 0; j < player.equipment[i].num_abilities; j++)
+            {
+                struct Ability ability = player.equipment[i].abilities[i];
+                if (ability.trigger != T_TURN)
+                    continue;
+                resolve_ability(ability.result, player.stats.mana, room, &player.stats, 0, 1);
+            }
+        }
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+        {
+            for (int i = 0; i < enemy->num_abilities; i++)
+            {
+                struct Ability ability = enemy->abilities[i];
+                if (ability.trigger != T_TURN)
+                    continue;
+                resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, 0, 0);
+            }
         }
         if (player.stats.hp <= 0)
         {

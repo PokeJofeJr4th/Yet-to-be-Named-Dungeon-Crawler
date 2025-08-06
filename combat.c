@@ -105,19 +105,19 @@ void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Comb
 {
     for (int i = 0; i < spell->num_targets; i++)
     {
-        struct SpellTarget *target = &spell->targets[i];
-        switch (target->type)
+        struct SpellTarget target = spell->targets[i];
+        switch (target.type)
         {
         case ST_SELF:
         case ST_EACH_ALLY:
         case ST_TARGET_ALLY:
-            for (int j = 0; j < target->num_effects; j++)
-                apply_effect(&target->effects[j], mana, caster);
+            for (int j = 0; j < target.num_effects; j++)
+                apply_effect(&target.effects[j], mana, caster);
             break;
         case ST_EACH_ENEMY:
             for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-                for (int j = 0; j < target->num_effects; j++)
-                    apply_effect(&target->effects[j], mana, &enemy->stats);
+                for (int j = 0; j < target.num_effects; j++)
+                    apply_effect(&target.effects[j], mana, &enemy->stats);
             break;
         case ST_TARGET_ENEMY:
             char buffer[128];
@@ -130,13 +130,46 @@ void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Comb
             {
                 if (strcmp(enemy->stats.name, line) != 0)
                     continue;
-                for (int j = 0; j < target->num_effects; j++)
-                    apply_effect(&target->effects[j], mana, &enemy->stats);
+                for (int j = 0; j < target.num_effects; j++)
+                    apply_effect(&target.effects[j], mana, &enemy->stats);
                 break;
             }
             break;
-        default:
-            // TODO?
+        }
+    }
+}
+
+void resolve_ability(struct Spell *spell, int mana, struct Room *room, struct Combatant *source, struct Combatant *opponent, int is_player)
+{
+    for (int i = 0; i < spell->num_targets; i++)
+    {
+        struct SpellTarget target = spell->targets[i];
+        switch (target.type)
+        {
+        case ST_EACH_ALLY:
+            if (!is_player)
+            {
+                for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+                    for (int j = 0; j < target.num_effects; j++)
+                        apply_effect(&target.effects[j], mana, &enemy->stats);
+                break;
+            }
+        case ST_SELF:
+        case ST_TARGET_ALLY:
+            for (int j = 0; j < target.num_effects; j++)
+                apply_effect(&target.effects[j], mana, source);
+            break;
+        case ST_EACH_ENEMY:
+            if (is_player)
+            {
+                for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+                    for (int j = 0; j < target.num_effects; j++)
+                        apply_effect(&target.effects[j], mana, &enemy->stats);
+                break;
+            }
+        case ST_TARGET_ENEMY:
+            for (int j = 0; j < target.num_effects; j++)
+                apply_effect(&target.effects[j], mana, opponent);
             break;
         }
     }
