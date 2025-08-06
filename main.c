@@ -92,6 +92,8 @@ void print_item(struct Item *i)
             printf(" %+i MANA.", i->mana);
         if (i->grants != 0)
             printf(" <%s>.", i->grants->name);
+        for (int j = 0; j < i->num_abilities; j++)
+            printf(" on %s: <%s>.", fmt_ability_trigger(i->abilities[j].trigger), i->abilities[j].result->name);
         printf(")");
     }
     printf("\n");
@@ -104,7 +106,13 @@ void print_room(struct Room *room, struct Dungeon *dungeon)
     {
         printf("Enemies:\n");
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-            printf(" %s (%u/%u HP, %u ATK, %u DEF)\n", enemy->stats.name, enemy->stats.hp, enemy->stats.max_hp, enemy->stats.atk, enemy->stats.def);
+        {
+
+            printf(" %s (%u/%u HP, %u ATK, %u DEF", enemy->stats.name, enemy->stats.hp, enemy->stats.max_hp, enemy->stats.atk, enemy->stats.def);
+            for (int j = 0; j < enemy->num_abilities; j++)
+                printf(", on %s: <%s>", fmt_ability_trigger(enemy->abilities[j].trigger), enemy->abilities[j].result->name);
+            printf(")\n");
+        }
     }
     if (room->items != 0)
     {
@@ -135,11 +143,14 @@ void print_spell(struct Spell *spell)
         }
         printf("\n");
     }
-    for (int i = 0; i < spell->num_targets; i++)
+    for (int i = 0; i < spell->num_blocks; i++)
     {
-        struct SpellTarget *t = &spell->targets[i];
-        switch (t->type)
+        struct SpellBlock t = spell->blocks[i];
+        switch (t.type)
         {
+        case ST_SUMMON:
+            printf(" Summon %s\n", t.effect.summon->stats.name);
+            continue;
         case ST_EACH_ALLY:
             printf(" All Allies:\n");
             break;
@@ -158,36 +169,36 @@ void print_spell(struct Spell *spell)
         default:
             break;
         }
-        for (int j = 0; j < t->num_effects; j++)
+        for (int j = 0; j < t.effect.status.num_effects; j++)
         {
-            switch (t->effects[j].type)
+            switch (t.effect.status.effects[j].type)
             {
             case SE_BURN:
-                printf("  Apply burn %i\n", t->effects[j].amount);
+                printf("  Apply burn %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_FORTIFY:
-                printf("  Apply fortify %i\n", t->effects[j].amount);
+                printf("  Apply fortify %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_POISON:
-                printf("  Apply poison %i\n", t->effects[j].amount);
+                printf("  Apply poison %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_RAGE:
-                printf("  Apply rage %i\n", t->effects[j].amount);
+                printf("  Apply rage %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_REGEN:
-                printf("  Apply regeneration %i\n", t->effects[j].amount);
+                printf("  Apply regeneration %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_STUN:
-                printf("  Apply stunned %i\n", t->effects[j].amount);
+                printf("  Apply stunned %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_WEAK:
-                printf("  Apply weakness %i\n", t->effects[j].amount);
+                printf("  Apply weakness %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_DMG:
-                printf("  Deal %i damage\n", t->effects[j].amount);
+                printf("  Deal %i damage\n", t.effect.status.effects[j].amount);
                 break;
             case SE_HEAL:
-                printf("  Heal %i\n", t->effects[j].amount);
+                printf("  Heal %i\n", t.effect.status.effects[j].amount);
                 break;
             default:
                 break;
@@ -693,6 +704,23 @@ char *fmt_equip_slot(enum Equipment s)
         return "WEAPON";
     case EQ_SHIELD:
         return "SHIELD";
+    default:
+        return 0;
+    }
+}
+
+char *fmt_ability_trigger(enum Trigger t)
+{
+    switch (t)
+    {
+    case T_ATK:
+        return "attack";
+    case T_DEF:
+        return "defend";
+    case T_TURN:
+        return "turn";
+    case T_DEATH:
+        return "death";
     default:
         return 0;
     }

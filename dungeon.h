@@ -22,13 +22,14 @@ struct Combatant
     int stun;
 };
 
-enum SpellTargetType
+enum SpellBlockType
 {
     ST_TARGET_ENEMY,
     ST_EACH_ENEMY,
     ST_TARGET_ALLY,
     ST_EACH_ALLY,
-    ST_SELF
+    ST_SELF,
+    ST_SUMMON,
 };
 
 enum SpellEffectType
@@ -44,25 +45,34 @@ enum SpellEffectType
     SE_REGEN,
 };
 
-struct SpellEffect
+struct SpellStatus
 {
     int amount;
     enum SpellEffectType type;
 };
 
-struct SpellTarget
+union SpellEffect
 {
-    struct SpellEffect *effects;
-    int num_effects;
-    enum SpellTargetType type;
+    struct
+    {
+        struct SpellStatus *effects;
+        int num_effects;
+    } status;
+    struct Enemy *summon;
+};
+
+struct SpellBlock
+{
+    union SpellEffect effect;
+    enum SpellBlockType type;
 };
 
 struct Spell
 {
     char name[32];
-    struct SpellTarget *targets;
+    struct SpellBlock *blocks;
     char **tags;
-    int num_targets;
+    int num_blocks;
     int num_tags;
     int cost;
 };
@@ -171,6 +181,7 @@ struct Player
 // I/O Helper Functions
 char *fmt_dir(enum Direction);
 char *fmt_equip_slot(enum Equipment s);
+char *fmt_ability_trigger(enum Trigger t);
 char *trim_wspace(char *);
 void confirm();
 void read_input(char *buffer);

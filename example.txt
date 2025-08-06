@@ -42,6 +42,18 @@ SPELL    Mass Restoration
   HEAL   2
   EFFECT FORTIFY 2
 
+SPELL    Summon Medium Slime
+  SUMMON Medium Slime
+   HP    2
+   ATK   2
+   ON DEATH Summon Small Slime
+   ON DEATH Summon Small Slime
+
+SPELL    Summon Small Slime
+  SUMMON Small Slime
+   HP    1
+   ATK   1
+
 ROOM    Entrance Hall
  DESC   A cold stone chamber with dripping moss.
  TAG    START
@@ -133,3 +145,13 @@ ROOM    Barracks
   ATK   5
   DEF   1
  EXIT   WEST Crypt
+ EXIT   EAST Sewer
+
+ROOM       Sewer
+ DESC      A tunnel with sludge covering the floor.
+ ENEMY     Large Slime
+  HP       4
+  ATK      4
+  ON DEATH Summon Medium Slime
+  ON DEATH Summon Medium Slime
+ EXIT WEST Barracks
