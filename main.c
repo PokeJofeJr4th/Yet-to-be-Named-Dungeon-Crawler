@@ -35,12 +35,8 @@ void init_player(struct Player *p)
     p->stats.regen = 0;
     p->stats.stun = 0;
     strcpy(p->stats.name, "You");
-    p->head.name[0] = 0;
-    p->chest.name[0] = 0;
-    p->legs.name[0] = 0;
-    p->feet.name[0] = 0;
-    p->weapon.name[0] = 0;
-    p->shield.name[0] = 0;
+    for (int i = 0; i < NUM_EQ_SLOTS; i++)
+        p->equipment[i].name[0] = 0;
     p->inventory = 0;
     p->spellbook = 0;
 }
@@ -50,42 +46,13 @@ void update_stats(struct Player *p)
     p->stats.atk = 1;
     p->stats.def = 0;
     p->stats.mana = 0;
-    if (p->head.name[0])
-    {
-        p->stats.atk += p->head.atk;
-        p->stats.def += p->head.def;
-        p->stats.mana += p->head.mana;
-    }
-    if (p->chest.name[0])
-    {
-        p->stats.atk += p->chest.atk;
-        p->stats.def += p->chest.def;
-        p->stats.mana += p->chest.mana;
-    }
-    if (p->legs.name[0])
-    {
-        p->stats.atk += p->legs.atk;
-        p->stats.def += p->legs.def;
-        p->stats.mana += p->legs.mana;
-    }
-    if (p->feet.name[0])
-    {
-        p->stats.atk += p->feet.atk;
-        p->stats.def += p->feet.def;
-        p->stats.mana += p->feet.mana;
-    }
-    if (p->weapon.name[0])
-    {
-        p->stats.atk += p->weapon.atk;
-        p->stats.def += p->weapon.def;
-        p->stats.mana += p->weapon.mana;
-    }
-    if (p->shield.name[0])
-    {
-        p->stats.atk += p->shield.atk;
-        p->stats.def += p->shield.def;
-        p->stats.mana += p->shield.mana;
-    }
+    for (int i = 0; i < NUM_EQ_SLOTS; i++)
+        if (p->equipment[i].name[0])
+        {
+            p->stats.atk += p->equipment[i].atk;
+            p->stats.def += p->equipment[i].def;
+            p->stats.mana += p->equipment[i].mana;
+        }
 }
 
 char *fmt_item_type(enum ItemType it)
@@ -368,22 +335,22 @@ int main(int argc, char **argv)
                     switch (item->type)
                     {
                     case IT_ARMOR_HEAD:
-                        slot = &player.head;
+                        slot = player.equipment + EQ_HEAD;
                         break;
                     case IT_ARMOR_CHEST:
-                        slot = &player.chest;
+                        slot = player.equipment + EQ_CHEST;
                         break;
                     case IT_ARMOR_LEGS:
-                        slot = &player.legs;
+                        slot = player.equipment + EQ_LEGS;
                         break;
                     case IT_ARMOR_FEET:
-                        slot = &player.feet;
+                        slot = player.equipment + EQ_FEET;
                         break;
                     case IT_SHIELD:
-                        slot = &player.shield;
+                        slot = player.equipment + EQ_SHIELD;
                         break;
                     case IT_WEAPON:
-                        slot = &player.weapon;
+                        slot = player.equipment + EQ_WEAPON;
                         break;
                     default:
                         break;
@@ -513,36 +480,12 @@ int main(int argc, char **argv)
         else if (strcmp(cmd_buffer, "inv") == 0 || strcmp(cmd_buffer, "inventory") == 0)
         {
             printf("\n");
-            if (player.head.name[0])
-            {
-                printf("HEAD:\n ");
-                print_item(&player.head);
-            }
-            if (player.chest.name[0])
-            {
-                printf("CHEST:\n ");
-                print_item(&player.chest);
-            }
-            if (player.legs.name[0])
-            {
-                printf("LEGS:\n ");
-                print_item(&player.legs);
-            }
-            if (player.feet.name[0])
-            {
-                printf("FEET:\n ");
-                print_item(&player.feet);
-            }
-            if (player.weapon.name[0])
-            {
-                printf("WEAPON:\n ");
-                print_item(&player.weapon);
-            }
-            if (player.shield.name[0])
-            {
-                printf("SHIELD:\n ");
-                print_item(&player.shield);
-            }
+            for (int i = 0; i < NUM_EQ_SLOTS; i++)
+                if (player.equipment[i].name[0])
+                {
+                    printf("%s:\n ", fmt_equip_slot(i));
+                    print_item(&player.equipment[i]);
+                }
             if (player.inventory)
             {
                 printf("Inventory:\n");
@@ -638,6 +581,14 @@ int main(int argc, char **argv)
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
             fight(&enemy->stats, &player.stats);
+            for (int i = 0; i < enemy->num_abilities; i++)
+            {
+                struct Ability ability = enemy->abilities[i];
+                if (ability.trigger != T_ATK)
+                    continue;
+                // TODO: Resolve the ability
+            }
+
             confirm();
         }
         if (player.stats.hp <= 0)
@@ -664,5 +615,26 @@ char *fmt_dir(enum Direction dir)
         return "west";
     default:
         return "ERROR";
+    }
+}
+
+char *fmt_equip_slot(enum Equipment s)
+{
+    switch (s)
+    {
+    case EQ_HEAD:
+        return "HEAD";
+    case EQ_CHEST:
+        return "CHEST";
+    case EQ_LEGS:
+        return "LEGS";
+    case EQ_FEET:
+        return "FEET";
+    case EQ_WEAPON:
+        return "WEAPON";
+    case EQ_SHIELD:
+        return "SHIELD";
+    default:
+        return 0;
     }
 }

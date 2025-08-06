@@ -148,22 +148,29 @@ struct SpellPage
     struct SpellPage *next;
 };
 
+enum Equipment
+{
+    EQ_HEAD,
+    EQ_CHEST,
+    EQ_LEGS,
+    EQ_FEET,
+    EQ_WEAPON,
+    EQ_SHIELD,
+    NUM_EQ_SLOTS
+};
+
 struct Player
 {
     struct Combatant stats;
     struct Item *inventory;
     struct SpellPage *spellbook;
     // these fields are all optional. If the item name is empty, there's no item.
-    struct Item head;
-    struct Item chest;
-    struct Item legs;
-    struct Item feet;
-    struct Item weapon;
-    struct Item shield;
+    struct Item equipment[NUM_EQ_SLOTS];
 };
 
 // I/O Helper Functions
 char *fmt_dir(enum Direction);
+char *fmt_equip_slot(enum Equipment s);
 char *trim_wspace(char *);
 void confirm();
 void read_input(char *buffer);
