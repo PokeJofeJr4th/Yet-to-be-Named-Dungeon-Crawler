@@ -67,11 +67,27 @@ struct Spell
     int cost;
 };
 
+enum Trigger
+{
+    T_ATK,
+    T_DEF,
+    T_DEATH,
+    T_TURN,
+};
+
+struct Ability
+{
+    enum Trigger trigger;
+    struct Spell *result;
+};
+
 struct Enemy
 {
     struct Combatant stats;
     struct Enemy *next;
     struct Item *drops;
+    struct Ability *abilities;
+    int num_abilities;
 };
 
 enum ItemType
@@ -90,10 +106,12 @@ struct Item
 {
     char name[32];
     struct Item *next;
+    struct Spell *grants;
+    struct Ability *abilities;
     int atk;
     int def;
     int mana;
-    struct Spell *grants;
+    int num_abilities;
     enum ItemType type;
 };
 
