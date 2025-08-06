@@ -93,7 +93,7 @@ ROOM       Chapel
  ITEM      Silver Circlet
   EQUIP    HEAD
   MANA     1
-  ON DEF   Firebolt
+  GRANTS   Firebolt
  ENEMY     Cult Acolyte
   HP       3
   ATK      1
@@ -110,7 +110,7 @@ ROOM     Crypt
   EQUIP  WEAPON
   ATK    1
   MANA   1
-  ON ATK Magic Missile
+  GRANTS Magic Missile
  ITEM    Tattered Robes
   EQUIP  CHEST
   MANA   1
@@ -123,13 +123,13 @@ ROOM     Crypt
 
 ROOM    Kitchen
  DESC   Rotten food and shattered dishes cover the floor.
- ITEM   Crypt Key
  ITEM   Iron Boots
   EQUIP FEET
   DEF   1
  ENEMY  Rat Swarm
   HP    2
   ATK   1
+  DROP  Crypt Key
  EXIT   EAST Great Hall
 
 ROOM    Barracks

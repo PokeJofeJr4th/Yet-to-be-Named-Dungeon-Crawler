@@ -143,6 +143,8 @@ Inside the target block are effects. The available spell effects are `DMG {amoun
 - FORTIFY
 - REGEN
 
+Instead of choosing a target and applying effects, a target block can summon an entity. These blocks start with `SUMMON {Entity Name}` and follow the exact format of enemies below.
+
 A spell can have multiple target blocks, and their effects are determined independently.
 
 ### Rooms
@@ -185,6 +187,8 @@ A piece of equipment with `GRANTS {Spell Name}` allows the player to cast the sp
 
 A piece of equipment with `ATK {amount}`, `DEF {amount}`, or `MANA {amount}` increases the player's corresponding stat by the specified amount when worn. ATK causes the wearer to deal more damage in combat (recommended for weapons), DEF causes the wearer to take less damage in combat (recommended for armor), and MANA causes the wearer's spells to become more potent (recommended for magical items).
 
+A piece of equipment with `ON {TRIGGER} {Spell Name}` will cast the given spell when the condition is met. See the **Triggered Abilities** section below for more information.
+
 ### Enemies
 
 ```
@@ -198,7 +202,21 @@ ENEMY      Cult Acolyte
 
 An enemy block starts with its name. This is used by the player to target the enemy for spells and attacks, so it should be unique within the room. Then, the enemy's HP, ATK, and DEF stats are specified. These are all optional, and the defaults are 1 HP, 1 ATK, and 0 DEF.
 
+Next, you can add triggered abilities. `ON {TRIGGER} {Spell Name}` will cast the given spell when the condition is met. See the **Triggered Abilities** section below for more information.
+
 Finally, you can add drops. These are placed in the room when the enemy dies. They have all the same attributes as items.
+
+### Triggered Abilities
+
+A triggered ability, in the format `ON {TRIGGER} {Spell Name}`, will cast the spell when the condition is met. `TRIGGER` can be one of the following values, and they will affect how spell targets are decided. A triggered ability is either applied to equipment or an enemy. This is designated as its source.
+
+**ATK** triggers when the ability source makes an attack. Any `TARGET ALLY` sections will affect the attacker and `TARGET ENEMY` sections affect the target of the attack.
+
+**DEF** triggers when the ability source is attacked. Any `TARGET ENEMY` sections will affect the attacker and `TARGET ALLY` sections affect the ability source.
+
+**TURN** triggers each turn. Any `TARGET ALLY` sections will affect the ability source and `TARGET ENEMY` sections are ignored.
+
+**DEATH** triggers when the ability source dies. No target sections will have any effect.
 
 ### Exits
 

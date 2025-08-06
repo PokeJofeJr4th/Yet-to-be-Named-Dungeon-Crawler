@@ -794,6 +794,8 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add cost without spell.\n");
                 continue;
             }
+            current_enemy = 0;
+            current_item = 0;
             current_spell->cost = cost;
         }
         else if (strncmp(line, "TARGET ", 7) == 0)
@@ -811,6 +813,8 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Invalid TARGET type: `%s`; expected `ENEMY`, `ALLY`, or `SELF`\n", line);
                 continue;
             }
+            current_enemy = 0;
+            current_item = 0;
             current_spell_target = malloc(sizeof(struct SpellBlockTmp));
             // set default values
             current_spell_target->effects.status.effects = 0;
@@ -834,6 +838,8 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Invalid EACH type: `%s`; expected `ENEMY` or `ALLY`\n", line);
                 continue;
             }
+            current_enemy = 0;
+            current_item = 0;
             current_spell_target = malloc(sizeof(struct SpellBlockTmp));
             // set default values
             current_spell_target->effects.status.effects = 0;
@@ -852,6 +858,8 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add `SUMMON %s` without a spell.\n", line);
                 continue;
             }
+            current_spell_target = 0;
+            current_item = 0;
             current_enemy = new_enemy(line);
             struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
             // set default values
@@ -864,6 +872,11 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "EFFECT ", 7) == 0)
         {
+            if (current_spell_target != 0)
+            {
+                printf("ERROR: Attempt to add effect without a target block.\n");
+                continue;
+            }
             char effect[8];
             int amount;
             line = trim_wspace(line + 7);
@@ -902,6 +915,11 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "DMG ", 4) == 0)
         {
+            if (current_spell_target != 0)
+            {
+                printf("ERROR: Attempt to add effect without a target block.\n");
+                continue;
+            }
             int amount;
             if (sscanf(line + 4, "%i", &amount) <= 0)
             {
@@ -919,6 +937,11 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "HEAL ", 5) == 0)
         {
+            if (current_spell_target != 0)
+            {
+                printf("ERROR: Attempt to add effect without a target block.\n");
+                continue;
+            }
             int amount;
             if (sscanf(line + 5, "%i", &amount) <= 0)
             {
