@@ -130,7 +130,8 @@ struct RoomTmp *new_room(char *name)
     room->items = 0;
     room->tags = 0;
     // copy the name over
-    strncpy(room->name, name, 32);
+    strncpy(room->name, name, 31);
+    room->name[31] = 0;
     // set an empty description
     room->desc[0] = 0;
     return room;
@@ -140,7 +141,8 @@ struct ItemTmp *new_item(char *name)
 {
     struct ItemTmp *i = malloc(sizeof(struct ItemTmp));
     // copy the item name
-    strncpy(i->name, name, 32);
+    strncpy(i->name, name, 31);
+    i->name[31] = 0;
     // add the default values
     i->atk = 0;
     i->def = 0;
@@ -156,7 +158,8 @@ struct EnemyTmp *new_enemy(char *name)
 {
     struct EnemyTmp *e = malloc(sizeof(struct EnemyTmp));
     // copy the enemy name
-    strncpy(e->name, name, 32);
+    strncpy(e->name, name, 31);
+    e->name[31] = 0;
     // initialize default values
     e->hp = 1;
     e->atk = 1;
@@ -240,7 +243,8 @@ struct Ability *copy_abilities(int amount, struct AbilityTmp *ability, struct Du
 struct Item *copy_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     struct Item *item = malloc(sizeof(struct Item));
-    strncpy(item->name, item_tmp->name, 32);
+    strncpy(item->name, item_tmp->name, 31);
+    item->name[31] = 0;
     item->atk = item_tmp->atk;
     item->def = item_tmp->def;
     item->mana = item_tmp->mana;
@@ -260,7 +264,8 @@ struct Item *copy_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct
 struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     struct Enemy *enemy = malloc(sizeof(struct Enemy));
-    strncpy(enemy->stats.name, enemy_tmp->name, 32);
+    strncpy(enemy->stats.name, enemy_tmp->name, 31);
+    enemy->stats.name[31] = 0;
     enemy->stats.burn = 0;
     enemy->stats.fortify = 0;
     enemy->stats.poison = 0;
@@ -291,8 +296,10 @@ void copy_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dung
     room->enemies = 0;
     room->items = 0;
     // move over the name and description
-    strncpy(room->name, room_tmp->name, 32);
-    strncpy(room->desc, room_tmp->desc, 128);
+    strncpy(room->name, room_tmp->name, 31);
+    room->name[31] = 0;
+    strncpy(room->desc, room_tmp->desc, 127);
+    room->desc[127] = 0;
     // move over the enemies
     for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
     {
@@ -530,7 +537,8 @@ struct Dungeon *load_dungeon(char *filename)
             }
             current_exit = malloc(sizeof(struct ExitTmp));
             current_exit->exit_dir = dir;
-            strncpy(current_exit->exit_to, exit, 32);
+            strncpy(current_exit->exit_to, exit, 31);
+            current_exit->exit_to[31] = 0;
             current_exit->key = 0;
             // hook into the linked list
             current_exit->next = current_room->exits;
@@ -733,14 +741,16 @@ struct Dungeon *load_dungeon(char *filename)
                 continue;
             }
             // add a description to the current room
-            strncpy(current_room->desc, trim_wspace(line + 5), 128);
+            strncpy(current_room->desc, trim_wspace(line + 5), 127);
+            current_room->desc[127] = 0;
         }
         else if (strncmp(line, "TAG ", 4) == 0)
         {
             current_exit = 0;
             struct TagTmp *tag_tmp = malloc(sizeof(struct TagTmp));
             // copy the tag name
-            strncpy(tag_tmp->tag, trim_wspace(line + 4), 16);
+            strncpy(tag_tmp->tag, trim_wspace(line + 4), 15);
+            tag_tmp->tag[15] = 0;
             // hook up to the linked list
             if (current_room != 0)
             {
@@ -768,7 +778,8 @@ struct Dungeon *load_dungeon(char *filename)
             current_room = 0;
             line = trim_wspace(line + 6);
             current_spell = malloc(sizeof(struct SpellTmp));
-            strncpy(current_spell->name, line, 32);
+            strncpy(current_spell->name, line, 31);
+            current_spell->name[31] = 0;
             // set all the default values
             current_spell->num_tags = 0;
             current_spell->num_blocks = 0;
@@ -880,11 +891,12 @@ struct Dungeon *load_dungeon(char *filename)
             char effect[8];
             int amount;
             line = trim_wspace(line + 7);
-            if (sscanf(line, "%s %i", effect, &amount) <= 0)
+            if (sscanf(line, "%7s %i", effect, &amount) <= 0)
             {
                 printf("ERROR: Invalid EFFECT statement: `%s`. Usage is EFFECT <name> <amount>\n", line);
                 continue;
             }
+            effect[7] = 0;
             enum SpellEffectType type;
             if (strcmp(effect, "RAGE") == 0)
                 type = SE_RAGE;
@@ -994,7 +1006,8 @@ struct Dungeon *load_dungeon(char *filename)
             struct AbilityTmp *ability = malloc(sizeof(struct AbilityTmp));
             ability->trigger = trigger;
             // copy the spell name over
-            strncpy(ability->result, line, 32);
+            strncpy(ability->result, line, 31);
+            ability->result[31] = 0;
             if (current_item != 0)
             {
                 // add the ability to the current item
