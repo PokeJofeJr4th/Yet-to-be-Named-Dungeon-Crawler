@@ -178,6 +178,7 @@ void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Comb
             summon(block.effect.summon, room);
             break;
         }
+        check_deaths(room);
     }
 }
 
@@ -218,4 +219,57 @@ void resolve_ability(struct Spell *spell, int mana, struct Room *room, struct Co
             break;
         }
     }
+}
+
+void check_deaths(struct Room *room)
+{
+    int death;
+    do
+    {
+        death = 0;
+        struct Enemy *prev = 0;
+        for (struct Enemy *enemy = room->enemies; enemy != 0;)
+        {
+            if (enemy->stats.hp <= 0)
+            {
+                printf("%s has perished.\n", enemy->stats.name);
+                death++;
+                confirm();
+                if (enemy->drops != 0)
+                {
+                    // find the end of the list of enemy drops
+                    struct Item *last = enemy->drops;
+                    while (last->next != 0)
+                        last = last->next;
+                    // prepend the list of enemy drops to the list of items in the room
+                    last->next = room->items;
+                    room->items = enemy->drops;
+                }
+                for (int i = 0; i < enemy->num_abilities; i++)
+                {
+                    struct Ability ability = enemy->abilities[i];
+                    if (ability.trigger != T_DEATH)
+                        continue;
+                    resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, 0, 0);
+                }
+                if (prev == 0)
+                {
+                    room->enemies = enemy->next;
+                    free(enemy);
+                    enemy = room->enemies;
+                }
+                else
+                {
+                    prev->next = enemy->next;
+                    free(enemy);
+                    enemy = prev->next;
+                }
+            }
+            else
+            {
+                prev = enemy;
+                enemy = enemy->next;
+            }
+        }
+    } while (death);
 }

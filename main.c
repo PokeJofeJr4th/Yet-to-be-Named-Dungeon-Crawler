@@ -488,6 +488,7 @@ int main(int argc, char **argv)
                 printf("No such enemy: `%s`", enemy_name);
                 continue;
             }
+            check_deaths(room);
         }
         else if (strncmp(cmd_buffer, "cast ", 5) == 0)
         {
@@ -506,6 +507,7 @@ int main(int argc, char **argv)
                 continue;
             }
             resolve_spell(spell, player.stats.mana, room, &player.stats);
+            check_deaths(room);
         }
         else if (strcmp(cmd_buffer, "inv") == 0 || strcmp(cmd_buffer, "inventory") == 0)
         {
@@ -570,50 +572,9 @@ int main(int argc, char **argv)
             printf("Unknown command\n");
             continue;
         }
-        struct Enemy *prev = 0;
-        for (struct Enemy *enemy = room->enemies; enemy != 0;)
-        {
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
             tick(&enemy->stats);
-            if (enemy->stats.hp <= 0)
-            {
-                printf("%s has perished.\n", enemy->stats.name);
-                confirm();
-                if (enemy->drops != 0)
-                {
-                    // find the end of the list of enemy drops
-                    struct Item *last = enemy->drops;
-                    while (last->next != 0)
-                        last = last->next;
-                    // prepend the list of enemy drops to the list of items in the room
-                    last->next = room->items;
-                    room->items = enemy->drops;
-                }
-                for (int i = 0; i < enemy->num_abilities; i++)
-                {
-                    struct Ability ability = enemy->abilities[i];
-                    if (ability.trigger != T_DEATH)
-                        continue;
-                    resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, 0, 0);
-                }
-                if (prev == 0)
-                {
-                    room->enemies = enemy->next;
-                    free(enemy);
-                    enemy = room->enemies;
-                }
-                else
-                {
-                    prev->next = enemy->next;
-                    free(enemy);
-                    enemy = prev->next;
-                }
-            }
-            else
-            {
-                prev = enemy;
-                enemy = enemy->next;
-            }
-        }
+        check_deaths(room);
         tick(&player.stats);
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
@@ -639,6 +600,7 @@ int main(int argc, char **argv)
             }
             confirm();
         }
+        check_deaths(room);
         for (int i = 0; i < NUM_EQ_SLOTS; i++)
         {
             if (player.equipment[i].name[0] == 0)
@@ -667,6 +629,7 @@ int main(int argc, char **argv)
             confirm();
             return 0;
         }
+        check_deaths(room);
         print_room(room, dungeon);
     }
 }

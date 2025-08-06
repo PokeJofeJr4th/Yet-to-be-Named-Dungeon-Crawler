@@ -194,3 +194,4 @@ void fight(struct Combatant *attacker, struct Combatant *target);
 void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Combatant *caster);
 void resolve_ability(struct Spell *spell, int mana, struct Room *room, struct Combatant *source, struct Combatant *opponent, int is_player);
 void tick(struct Combatant *c);
+void check_deaths(struct Room *room);
