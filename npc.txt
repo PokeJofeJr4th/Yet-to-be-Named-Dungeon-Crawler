@@ -1,0 +1,15 @@
+NPC Brad
+ STATE idle
+  SAY    Hello!
+  OPTION I hate you
+   SUMMON Brad
+    HP    3
+    ATK   5
+    DEF   1
+   DESPAWN
+  OPTION Hello!
+   UNLESS FLAG given_coin
+    TO-STATE give_coin
+ STATE give_coin
+  SAY  Here you go!
+  GIVE Gold Coin
