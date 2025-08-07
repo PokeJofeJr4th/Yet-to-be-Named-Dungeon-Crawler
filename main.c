@@ -376,8 +376,8 @@ int main(int argc, char **argv)
                         page->spell = item->grants;
                     }
                     struct Item tmp;
-                    memcpy(&tmp, slot, sizeof(struct Item));
-                    memcpy(slot, item, sizeof(struct Item));
+                    tmp = *slot;
+                    *slot = *item;
                     slot->next = 0;
                     // if there was something in the slot
                     if (tmp.name[0])
@@ -395,9 +395,8 @@ int main(int argc, char **argv)
                                 break;
                             }
                         }
-                        slot = item->next;
-                        memcpy(item, &tmp, sizeof(struct Item));
-                        item->next = slot;
+                        tmp.next = item->next;
+                        *item = tmp;
                     }
                     else
                     {

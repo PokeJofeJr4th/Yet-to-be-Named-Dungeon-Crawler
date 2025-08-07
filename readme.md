@@ -115,7 +115,7 @@ Cast a spell. You will be asked to select targets, and then the spell's effects 
 
 ## How to Make a Dungeon
 
-A dungeon is a text file containing definitions of spells and rooms. Spaces and tabs are largely ignored, but indentation is recommended to make scope easier to follow. It is also recommended to place lines in the order described here. Certain other orderings can produce unexpected behavior.
+A dungeon is a text file containing definitions of spells and rooms. Spaces and tabs are largely ignored, but indentation is recommended to make scope easier to follow. It is also recommended to place lines in the order described here. Certain other orderings can produce unexpected behavior. Comments start with `#` and can take up a full line or be placed after a line of code.
 
 Once you're done with this guide, you can look at `example.txt` to see what a dungeon file looks like.
 
@@ -189,9 +189,24 @@ A piece of equipment with `ATK {amount}`, `DEF {amount}`, or `MANA {amount}` inc
 
 A piece of equipment with `ON {TRIGGER} {Spell Name}` will cast the given spell when the condition is met. See the **Triggered Abilities** section below for more information.
 
+#### Templates
+
+```
+TEMPLATE ITEM Wand
+ EQUIP WEAPON
+ MANA  1
+ ATK   1
+```
+
+A template item needs to be placed at the top of the file, before it is ever used. The template has all the same attributes as a normal item but allows enemy drops and room items to derive from a shared list of properties. To use a template, append `-FROM` to the keyword at the start of a line -- for example, `ITEM-FROM Wand` or `DROP-FROM Wand`. This will copy all of the attributes of the template and allow you to modify them as described above. You can also use the `NAME` keyword to change the name of the item -- for example, `NAME Bone Wand`.
+
 ### Enemies
 
 ```
+TEMPLATE ENEMY Medium Slime
+ HP       2
+ ATK      2
+ ON DEATH Summon Small Slimes # Create two small slimes
 ENEMY      Cult Acolyte
   HP       3
   ATK      1
@@ -205,6 +220,17 @@ An enemy block starts with its name. This is used by the player to target the en
 Next, you can add triggered abilities. `ON {TRIGGER} {Spell Name}` will cast the given spell when the condition is met. See the **Triggered Abilities** section below for more information.
 
 Finally, you can add drops. These are placed in the room when the enemy dies. They have all the same attributes as items.
+
+#### Templates
+
+```
+TEMPLATE ENEMY Orc
+ HP  2
+ ATK 2
+ DEF 1
+```
+
+A template enemy needs to be placed at the top of the file, before it is ever used. The template has all the same attributes as a normal enemy but allows spell summons and room enemies to derive from a shared list of properties. To use a template, append `-FROM` to the keyword at the start of a line -- for example, `ENEMY-FROM Orc` or `SUMMON-FROM Orc`. This will copy all of the attributes of the template and allow you to modify them as described above. You can also use the `NAME` keyword to change the name of the enemy -- for example, `NAME Orc Captain`.
 
 ### Triggered Abilities
 

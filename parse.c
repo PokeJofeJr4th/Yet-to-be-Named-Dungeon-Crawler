@@ -70,9 +70,9 @@ struct EnemyTmp
 struct ItemTmp
 {
     char name[32];
+    char grants[32];
     struct ItemTmp *next;
     struct AbilityTmp *abilities;
-    char *grants;
     int atk;
     int def;
     int mana;
@@ -103,13 +103,15 @@ struct DungeonTmp
 {
     struct RoomTmp *rooms;
     struct SpellTmp *spells;
+    struct ItemTmp *item_templates;
+    struct EnemyTmp *enemy_templates;
     int num_rooms;
     int num_spells;
 };
 
 void print_dungeon_tmp(struct DungeonTmp);
 void print_dungeon(struct Dungeon *);
-struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp);
+struct Enemy *convert_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp);
 
 char *trim_wspace(char *p)
 {
@@ -147,11 +149,54 @@ struct ItemTmp *new_item(char *name)
     i->atk = 0;
     i->def = 0;
     i->mana = 0;
-    i->grants = 0;
     i->type = IT_DEFAULT;
+    i->grants[0] = 0;
     i->abilities = 0;
     i->num_abilities = 0;
     return i;
+}
+
+struct AbilityTmp *clone_abilities_tmp(struct AbilityTmp *s)
+{
+    if (s == 0)
+        return 0;
+    struct AbilityTmp *a = malloc(sizeof(struct AbilityTmp));
+    a->trigger = s->trigger;
+    strcpy(a->result, s->result);
+    a->next = clone_abilities_tmp(s->next);
+    return a;
+}
+
+struct ItemTmp *clone_items_tmp(struct ItemTmp *s)
+{
+    if (s == 0)
+        return 0;
+    struct ItemTmp *d = malloc(sizeof(struct ItemTmp));
+    *d = *s;
+    d->next = clone_items_tmp(s->next);
+    d->abilities = clone_abilities_tmp(s->abilities);
+    return d;
+}
+
+struct ItemTmp *item_from_template(char *name, struct DungeonTmp *dungeon)
+{
+    struct ItemTmp *s = 0;
+    for (struct ItemTmp *j = dungeon->item_templates; j != 0; j = j->next)
+    {
+        if (strcmp(j->name, name) == 0)
+        {
+            s = j;
+            break;
+        }
+    }
+    if (s == 0)
+        return 0;
+    struct ItemTmp *d = malloc(sizeof(struct ItemTmp));
+    // copy the basic data
+    *d = *s;
+    // copy the abilities
+    d->abilities = clone_abilities_tmp(s->abilities);
+    return d;
 }
 
 struct EnemyTmp *new_enemy(char *name)
@@ -171,7 +216,28 @@ struct EnemyTmp *new_enemy(char *name)
     return e;
 }
 
-void copy_spell(struct Spell *spell, struct SpellTmp *spell_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+struct EnemyTmp *enemy_from_template(char *name, struct DungeonTmp *dungeon)
+{
+    struct EnemyTmp *s = 0;
+    for (struct EnemyTmp *j = dungeon->enemy_templates; j != 0; j = j->next)
+    {
+        if (strcmp(j->name, name) == 0)
+        {
+            s = j;
+            break;
+        }
+    }
+    if (s == 0)
+        return 0;
+    struct EnemyTmp *d = malloc(sizeof(struct EnemyTmp));
+    *d = *s;
+    d->abilities = clone_abilities_tmp(s->abilities);
+    d->next = 0;
+    d->drops = clone_items_tmp(s->drops);
+    return d;
+}
+
+void convert_spell(struct Spell *spell, struct SpellTmp *spell_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     // move over the trivial fields (cost+name)
     spell->cost = spell_tmp->cost;
@@ -187,7 +253,7 @@ void copy_spell(struct Spell *spell, struct SpellTmp *spell_tmp, struct Dungeon 
         if (target->type == ST_SUMMON)
         {
             // move over the entity
-            target->effect.summon = copy_enemy(target_tmp->effects.enemy, dungeon, dungeon_tmp);
+            target->effect.summon = convert_enemy(target_tmp->effects.enemy, dungeon, dungeon_tmp);
         }
         else
         {
@@ -227,7 +293,7 @@ struct Spell *find_spell(char *name, struct Dungeon *dungeon, struct DungeonTmp 
     return 0;
 }
 
-struct Ability *copy_abilities(int amount, struct AbilityTmp *ability, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+struct Ability *convert_abilities(int amount, struct AbilityTmp *ability, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     struct Ability *a = malloc(sizeof(struct Ability) * amount);
     for (struct Ability *a_t = a; ability != 0; ability = ability->next, a_t++)
@@ -240,7 +306,7 @@ struct Ability *copy_abilities(int amount, struct AbilityTmp *ability, struct Du
     return a;
 }
 
-struct Item *copy_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+struct Item *convert_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     struct Item *item = malloc(sizeof(struct Item));
     strncpy(item->name, item_tmp->name, 31);
@@ -250,18 +316,18 @@ struct Item *copy_item(struct ItemTmp *item_tmp, struct Dungeon *dungeon, struct
     item->mana = item_tmp->mana;
     item->type = item_tmp->type;
     item->grants = 0;
-    if (item_tmp->grants != 0)
+    if (item_tmp->grants[0] != 0)
     {
         item->grants = find_spell(item_tmp->grants, dungeon, dungeon_tmp);
         if (item->grants == 0)
             printf("ERROR: Failed to find spell `%s`, granted by item `%s`\n", item_tmp->grants, item_tmp->name);
     }
     item->num_abilities = item_tmp->num_abilities;
-    item->abilities = copy_abilities(item->num_abilities, item_tmp->abilities, dungeon, dungeon_tmp);
+    item->abilities = convert_abilities(item->num_abilities, item_tmp->abilities, dungeon, dungeon_tmp);
     return item;
 }
 
-struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+struct Enemy *convert_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     struct Enemy *enemy = malloc(sizeof(struct Enemy));
     strncpy(enemy->stats.name, enemy_tmp->name, 31);
@@ -278,11 +344,11 @@ struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, st
     enemy->stats.def = enemy_tmp->def;
     enemy->stats.mana = enemy_tmp->mana;
     enemy->num_abilities = enemy_tmp->num_abilities;
-    enemy->abilities = copy_abilities(enemy->num_abilities, enemy_tmp->abilities, dungeon, dungeon_tmp);
+    enemy->abilities = convert_abilities(enemy->num_abilities, enemy_tmp->abilities, dungeon, dungeon_tmp);
     enemy->drops = 0;
     for (struct ItemTmp *item_tmp = enemy_tmp->drops; item_tmp != 0; item_tmp = item_tmp->next)
     {
-        struct Item *item = copy_item(item_tmp, dungeon, dungeon_tmp);
+        struct Item *item = convert_item(item_tmp, dungeon, dungeon_tmp);
         // hook into the linked list
         item->next = enemy->drops;
         enemy->drops = item;
@@ -290,7 +356,7 @@ struct Enemy *copy_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, st
     return enemy;
 }
 
-void copy_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+void convert_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     // start with an empty list
     room->enemies = 0;
@@ -303,7 +369,7 @@ void copy_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dung
     // move over the enemies
     for (struct EnemyTmp *enemy_tmp = room_tmp->enemies; enemy_tmp != 0; enemy_tmp = enemy_tmp->next)
     {
-        struct Enemy *enemy = copy_enemy(enemy_tmp, dungeon, dungeon_tmp);
+        struct Enemy *enemy = convert_enemy(enemy_tmp, dungeon, dungeon_tmp);
         enemy->next = room->enemies;
         room->enemies = enemy;
     }
@@ -335,7 +401,7 @@ void copy_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dung
     // move over the items
     for (struct ItemTmp *item_tmp = room_tmp->items; item_tmp != 0; item_tmp = item_tmp->next)
     {
-        struct Item *item = copy_item(item_tmp, dungeon, dungeon_tmp);
+        struct Item *item = convert_item(item_tmp, dungeon, dungeon_tmp);
         item->next = room->items;
         room->items = item;
     }
@@ -452,12 +518,12 @@ struct Dungeon *copy_dungeon(struct DungeonTmp *dungeon_tmp)
     // loop through the spells of the tmp and final dungeon in parallel
     struct Spell *spell = dungeon->spells;
     for (struct SpellTmp *spell_tmp = dungeon_tmp->spells; spell_tmp != 0; spell_tmp = spell_tmp->next)
-        copy_spell(spell++, spell_tmp, dungeon, dungeon_tmp);
+        convert_spell(spell++, spell_tmp, dungeon, dungeon_tmp);
     dungeon->num_rooms = dungeon_tmp->num_rooms;
     // loop through the rooms of the tmp and final dungeon in parallel
     struct Room *room = dungeon->rooms;
     for (struct RoomTmp *room_tmp = dungeon_tmp->rooms; room_tmp != 0; room_tmp = room_tmp->next)
-        copy_room(room++, room_tmp, dungeon, dungeon_tmp);
+        convert_room(room++, room_tmp, dungeon, dungeon_tmp);
     return dungeon;
 }
 
@@ -465,6 +531,8 @@ struct Dungeon *load_dungeon(char *filename)
 {
     struct DungeonTmp dungeon_tmp =
         {
+            .enemy_templates = 0,
+            .item_templates = 0,
             .num_rooms = 0,
             .rooms = 0,
             .num_spells = 0,
@@ -481,6 +549,10 @@ struct Dungeon *load_dungeon(char *filename)
 
     while (fgets(line_buffer, 128, f))
     {
+        // comments
+        for (char *c = line_buffer; *c; c++)
+            if (*c == '#')
+                *c-- = 0;
         for (int i = strlen(line_buffer) - 1; i > 0 && isspace(line_buffer[i]); line_buffer[i--] = '\0')
             ;
         char *line = trim_wspace(line_buffer);
@@ -559,11 +631,44 @@ struct Dungeon *load_dungeon(char *filename)
             }
             current_exit->key = strdup(trim_wspace(line + 4));
         }
-        else if (strncmp(line, "ITEM ", 5) == 0)
+        else if (strncmp(line, "TEMPLATE ITEM ", 14) == 0)
         {
             current_enemy = 0;
             current_exit = 0;
+            current_item = new_item(trim_wspace(line + 14));
+            // hook up to the linked list
+            current_item->next = dungeon_tmp.item_templates;
+            dungeon_tmp.item_templates = current_item;
+        }
+        else if (strncmp(line, "ITEM ", 5) == 0)
+        {
+            if (current_room == 0)
+            {
+                printf("ERROR: Attempt to create item without current room.\n");
+                continue;
+            }
+            current_enemy = 0;
+            current_exit = 0;
             current_item = new_item(trim_wspace(line + 5));
+            // hook up to the linked list
+            current_item->next = current_room->items;
+            current_room->items = current_item;
+        }
+        else if (strncmp(line, "ITEM-FROM ", 10) == 0)
+        {
+            line = trim_wspace(line + 10);
+            if (current_room == 0)
+            {
+                printf("ERROR: Attempt to create item `%s` without current room.\n", line);
+                continue;
+            }
+            current_enemy = 0;
+            current_exit = 0;
+            if ((current_item = item_from_template(line, &dungeon_tmp)) == 0)
+            {
+                printf("ERROR: Failed to find item template `%s`\n", line);
+                continue;
+            }
             // hook up to the linked list
             current_item->next = current_room->items;
             current_room->items = current_item;
@@ -581,6 +686,23 @@ struct Dungeon *load_dungeon(char *filename)
             current_item->next = current_enemy->drops;
             current_enemy->drops = current_item;
         }
+        else if (strncmp(line, "DROP-FROM ", 10) == 0)
+        {
+            line = trim_wspace(line + 10);
+            if (current_enemy == 0)
+            {
+                printf("ERROR: Attempt to add dropped item `%s` without enemy.\n", line);
+                continue;
+            }
+            if ((current_item = item_from_template(line, &dungeon_tmp)) == 0)
+            {
+                printf("ERROR: Failed to find item template `%s`\n", line);
+                continue;
+            }
+            // hook up to the linked list
+            current_item->next = current_enemy->drops;
+            current_enemy->drops = current_item;
+        }
         else if (strncmp(line, "GRANTS ", 7) == 0)
         {
             line = trim_wspace(line + 7);
@@ -589,12 +711,13 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add GRANTS without an item.\n");
                 continue;
             }
-            if (current_item->grants != 0)
+            if (current_item->grants[0] != 0)
             {
                 printf("ERROR: An item may not grant more than one spell.\n");
                 continue;
             }
-            current_item->grants = strdup(line);
+            strncpy(current_item->grants, line, 31);
+            current_item->grants[31] = 0;
         }
         else if (strncmp(line, "CONSUME ", 8) == 0)
         {
@@ -604,7 +727,7 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add CONSUME without item.\n");
                 continue;
             }
-            if (current_item->grants != 0)
+            if (current_item->grants[0] != 0)
             {
                 printf("ERROR: An item may not grant more than one spell.\n");
                 continue;
@@ -614,7 +737,8 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: An item may only be marked with one EQUIP or CONSUME.\n");
                 continue;
             }
-            current_item->grants = strdup(line);
+            strncpy(current_item->grants, line, 31);
+            current_item->grants[31] = 0;
             current_item->type = IT_CONSUME;
         }
         else if (strncmp(line, "EQUIP ", 6) == 0)
@@ -648,6 +772,20 @@ struct Dungeon *load_dungeon(char *filename)
                 continue;
             }
         }
+        else if (strncmp(line, "TEMPLATE ENEMY ", 15) == 0)
+        {
+            line = trim_wspace(line + 15);
+            // update parser state
+            current_exit = 0;
+            current_item = 0;
+            current_spell = 0;
+            current_spell_target = 0;
+            current_room = 0;
+            current_enemy = new_enemy(line);
+            //  hook up to the linked list
+            current_enemy->next = dungeon_tmp.enemy_templates;
+            dungeon_tmp.enemy_templates = current_enemy;
+        }
         else if (strncmp(line, "ENEMY ", 6) == 0)
         {
             line = trim_wspace(line + 6);
@@ -660,6 +798,26 @@ struct Dungeon *load_dungeon(char *filename)
             current_exit = 0;
             current_item = 0;
             current_enemy = new_enemy(line);
+            //  hook up to the linked list
+            current_enemy->next = current_room->enemies;
+            current_room->enemies = current_enemy;
+        }
+        else if (strncmp(line, "ENEMY-FROM ", 11) == 0)
+        {
+            line = trim_wspace(line + 11);
+            if (current_room == 0)
+            {
+                printf("ERROR: Attempt to add enemy without room: `%s`", line);
+                continue;
+            }
+            if ((current_enemy = enemy_from_template(line, &dungeon_tmp)) == 0)
+            {
+                printf("ERROR: Failed to find enemy template `%s`\n", line);
+                continue;
+            }
+            // update parser state
+            current_exit = 0;
+            current_item = 0;
             //  hook up to the linked list
             current_enemy->next = current_room->enemies;
             current_room->enemies = current_enemy;
@@ -715,6 +873,22 @@ struct Dungeon *load_dungeon(char *filename)
                 current_enemy->atk = atk;
             else
                 printf("ERROR: Attempt to add ATK without item or enemy.\n");
+        }
+        else if (strncmp(line, "NAME ", 5) == 0)
+        {
+            line = trim_wspace(line + 5);
+            if (current_item != 0)
+            {
+                strncpy(current_item->name, line, 31);
+                current_item->name[31] = 0;
+            }
+            else if (current_enemy != 0)
+            {
+                strncpy(current_enemy->name, line, 31);
+                current_enemy->name[31] = 0;
+            }
+            else
+                printf("ERROR: Attempt to add NAME without item or enemy.\n");
         }
         else if (strncmp(line, "DEF ", 4) == 0)
         {
@@ -881,9 +1055,33 @@ struct Dungeon *load_dungeon(char *filename)
             current_spell->blocks = enemy_block;
             current_spell->num_blocks++;
         }
+        else if (strncmp(line, "SUMMON-FROM ", 12) == 0)
+        {
+            line = trim_wspace(line + 12);
+            if (current_spell == 0)
+            {
+                printf("ERROR: Attempt to add `SUMMON-FROM %s` without a spell.\n", line);
+                continue;
+            }
+            if ((current_enemy = enemy_from_template(line, &dungeon_tmp)) == 0)
+            {
+                printf("ERROR: Failed to find enemy template `%s`\n", line);
+                continue;
+            }
+            current_spell_target = 0;
+            current_item = 0;
+            struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
+            // set default values
+            enemy_block->effects.enemy = current_enemy;
+            enemy_block->type = ST_SUMMON;
+            // hook into the linked list
+            enemy_block->next = current_spell->blocks;
+            current_spell->blocks = enemy_block;
+            current_spell->num_blocks++;
+        }
         else if (strncmp(line, "EFFECT ", 7) == 0)
         {
-            if (current_spell_target != 0)
+            if (current_spell_target == 0)
             {
                 printf("ERROR: Attempt to add effect without a target block.\n");
                 continue;
@@ -927,7 +1125,7 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "DMG ", 4) == 0)
         {
-            if (current_spell_target != 0)
+            if (current_spell_target == 0)
             {
                 printf("ERROR: Attempt to add effect without a target block.\n");
                 continue;
@@ -949,7 +1147,7 @@ struct Dungeon *load_dungeon(char *filename)
         }
         else if (strncmp(line, "HEAL ", 5) == 0)
         {
-            if (current_spell_target != 0)
+            if (current_spell_target == 0)
             {
                 printf("ERROR: Attempt to add effect without a target block.\n");
                 continue;
