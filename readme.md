@@ -115,7 +115,7 @@ Cast a spell. You will be asked to select targets, and then the spell's effects 
 
 ## How to Make a Dungeon
 
-A dungeon is a text file containing definitions of spells and rooms. Spaces and tabs are largely ignored, but indentation is recommended to make scope easier to follow. It is also recommended to place lines in the order described here. Certain other orderings can produce unexpected behavior.
+A dungeon is a text file containing definitions of spells and rooms. Spaces and tabs are largely ignored, but indentation is recommended to make scope easier to follow. It is also recommended to place lines in the order described here. Certain other orderings can produce unexpected behavior. Comments start with `#` and can take up a full line or be placed after a line of code.
 
 Once you're done with this guide, you can look at `example.txt` to see what a dungeon file looks like.
 
