@@ -42,6 +42,20 @@ SPELL    Mass Restoration
   HEAL   2
   EFFECT FORTIFY 2
 
+SPELL    Summon Medium Slime
+  SUMMON Medium Slime
+   HP    2
+   ATK   2
+   ON DEATH Summon Small Slime
+   ON DEATH Summon Small Slime
+
+SPELL    Summon Small Slime
+  SUMMON Small Slime
+
+SPELL    Summon Rats
+  SUMMON Rat
+  SUMMON Rat
+
 ROOM    Entrance Hall
  DESC   A cold stone chamber with dripping moss.
  TAG    START
@@ -74,23 +88,26 @@ ROOM    Armory
  ITEM   Heater Shield
   EQUIP SHIELD
   DEF   2
+ ITEM   Battleaxe
+  EQUIP WEAPON
+  ATK   3
  EXIT   WEST Great Hall
 
-ROOM      Chapel
- DESC     A quiet place, scorched by dark rituals.
- ITEM     Healing Potion
-  CONSUME Heal
- ITEM     Silver Circlet
-  EQUIP   HEAD
-  MANA    1
-  GRANTS  Firebolt
- ENEMY    Cult Acolyte
-  HP      3
-  ATK     1
-  DEF     1
- EXIT     SOUTH Great Hall
- EXIT     EAST  Crypt
-  KEY     Crypt Key
+ROOM       Chapel
+ DESC      A quiet place, scorched by dark rituals.
+ ITEM      Silver Circlet
+  EQUIP    HEAD
+  MANA     1
+  GRANTS   Firebolt
+ ENEMY     Cult Acolyte
+  HP       3
+  ATK      1
+  DEF      1
+  DROP     Healing Potion
+   CONSUME Heal
+ EXIT      SOUTH Great Hall
+ EXIT      EAST  Crypt
+  KEY      Crypt Key
 
 ROOM     Crypt
  DESC    Cracked stone coffins and stale air.
@@ -101,7 +118,7 @@ ROOM     Crypt
   GRANTS Magic Missile
  ITEM    Tattered Robes
   EQUIP  CHEST
-  MANA   3
+  MANA   1
  ENEMY   Skeleton
   HP     3
   ATK    1
@@ -109,27 +126,38 @@ ROOM     Crypt
   KEY    Crypt Key
  EXIT    EAST Barracks
 
-ROOM    Kitchen
- DESC   Rotten food and shattered dishes cover the floor.
- ITEM   Crypt Key
- ITEM   Iron Boots
-  EQUIP FEET
-  DEF   1
- ENEMY  Rat Swarm
-  HP    2
-  ATK   1
- EXIT   EAST Great Hall
+ROOM       Kitchen
+ DESC      Rotten food and shattered dishes cover the floor.
+ ITEM      Iron Boots
+  EQUIP    FEET
+  DEF      1
+ ENEMY     Rat Swarm
+  HP       2
+  ATK      1
+  ON TURN  Summon Rats
+  DROP     Crypt Key
+ EXIT      EAST Great Hall
 
 ROOM    Barracks
  DESC   Broken beds and bloodstains mark old conflict.
- ITEM   Chainmail Pants
-  EQUIP LEGS
-  DEF   2
- ITEM   Tower Shield
-  EQUIP SHIELD
-  DEF   3
  ENEMY  Goblin Captain
   HP    5
-  ATK   3
-  DEF   1
+  ATK   5
+  DEF   5
+  DROP   Chainmail Pants
+   EQUIP LEGS
+   DEF   2
+  DROP   Tower Shield
+   EQUIP SHIELD
+   DEF   3
  EXIT   WEST Crypt
+ EXIT   EAST Sewer
+
+ROOM       Sewer
+ DESC      A tunnel with sludge covering the floor.
+ ENEMY     Large Slime
+  HP       4
+  ATK      4
+  ON DEATH Summon Medium Slime
+  ON DEATH Summon Medium Slime
+ EXIT WEST Barracks

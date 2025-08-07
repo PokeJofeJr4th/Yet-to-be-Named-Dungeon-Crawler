@@ -35,12 +35,8 @@ void init_player(struct Player *p)
     p->stats.regen = 0;
     p->stats.stun = 0;
     strcpy(p->stats.name, "You");
-    p->head.name[0] = 0;
-    p->chest.name[0] = 0;
-    p->legs.name[0] = 0;
-    p->feet.name[0] = 0;
-    p->weapon.name[0] = 0;
-    p->shield.name[0] = 0;
+    for (int i = 0; i < NUM_EQ_SLOTS; i++)
+        p->equipment[i].name[0] = 0;
     p->inventory = 0;
     p->spellbook = 0;
 }
@@ -50,42 +46,13 @@ void update_stats(struct Player *p)
     p->stats.atk = 1;
     p->stats.def = 0;
     p->stats.mana = 0;
-    if (p->head.name[0])
-    {
-        p->stats.atk += p->head.atk;
-        p->stats.def += p->head.def;
-        p->stats.mana += p->head.mana;
-    }
-    if (p->chest.name[0])
-    {
-        p->stats.atk += p->chest.atk;
-        p->stats.def += p->chest.def;
-        p->stats.mana += p->chest.mana;
-    }
-    if (p->legs.name[0])
-    {
-        p->stats.atk += p->legs.atk;
-        p->stats.def += p->legs.def;
-        p->stats.mana += p->legs.mana;
-    }
-    if (p->feet.name[0])
-    {
-        p->stats.atk += p->feet.atk;
-        p->stats.def += p->feet.def;
-        p->stats.mana += p->feet.mana;
-    }
-    if (p->weapon.name[0])
-    {
-        p->stats.atk += p->weapon.atk;
-        p->stats.def += p->weapon.def;
-        p->stats.mana += p->weapon.mana;
-    }
-    if (p->shield.name[0])
-    {
-        p->stats.atk += p->shield.atk;
-        p->stats.def += p->shield.def;
-        p->stats.mana += p->shield.mana;
-    }
+    for (int i = 0; i < NUM_EQ_SLOTS; i++)
+        if (p->equipment[i].name[0])
+        {
+            p->stats.atk += p->equipment[i].atk;
+            p->stats.def += p->equipment[i].def;
+            p->stats.mana += p->equipment[i].mana;
+        }
 }
 
 char *fmt_item_type(enum ItemType it)
@@ -118,21 +85,15 @@ void print_item(struct Item *i)
     {
         printf(" (%s:", fmt_item_type(i->type));
         if (i->atk != 0)
-        {
-            printf(" %+i ATK", i->atk);
-        }
+            printf(" %+i ATK.", i->atk);
         if (i->def != 0)
-        {
-            printf(" %+i DEF", i->def);
-        }
+            printf(" %+i DEF.", i->def);
         if (i->mana != 0)
-        {
-            printf(" %+i MANA", i->mana);
-        }
+            printf(" %+i MANA.", i->mana);
         if (i->grants != 0)
-        {
-            printf(" <%s>", i->grants->name);
-        }
+            printf(" <%s>.", i->grants->name);
+        for (int j = 0; j < i->num_abilities; j++)
+            printf(" on %s: <%s>.", fmt_ability_trigger(i->abilities[j].trigger), i->abilities[j].result->name);
         printf(")");
     }
     printf("\n");
@@ -145,7 +106,13 @@ void print_room(struct Room *room, struct Dungeon *dungeon)
     {
         printf("Enemies:\n");
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-            printf(" %s (%u/%u HP, %u ATK, %u DEF)\n", enemy->stats.name, enemy->stats.hp, enemy->stats.max_hp, enemy->stats.atk, enemy->stats.def);
+        {
+
+            printf(" %s (%u/%u HP, %u ATK, %u DEF", enemy->stats.name, enemy->stats.hp, enemy->stats.max_hp, enemy->stats.atk, enemy->stats.def);
+            for (int j = 0; j < enemy->num_abilities; j++)
+                printf(", on %s: <%s>", fmt_ability_trigger(enemy->abilities[j].trigger), enemy->abilities[j].result->name);
+            printf(")\n");
+        }
     }
     if (room->items != 0)
     {
@@ -176,11 +143,14 @@ void print_spell(struct Spell *spell)
         }
         printf("\n");
     }
-    for (int i = 0; i < spell->num_targets; i++)
+    for (int i = 0; i < spell->num_blocks; i++)
     {
-        struct SpellTarget *t = &spell->targets[i];
-        switch (t->type)
+        struct SpellBlock t = spell->blocks[i];
+        switch (t.type)
         {
+        case ST_SUMMON:
+            printf(" Summon %s\n", t.effect.summon->stats.name);
+            continue;
         case ST_EACH_ALLY:
             printf(" All Allies:\n");
             break;
@@ -199,36 +169,36 @@ void print_spell(struct Spell *spell)
         default:
             break;
         }
-        for (int j = 0; j < t->num_effects; j++)
+        for (int j = 0; j < t.effect.status.num_effects; j++)
         {
-            switch (t->effects[j].type)
+            switch (t.effect.status.effects[j].type)
             {
             case SE_BURN:
-                printf("  Apply burn %i\n", t->effects[j].amount);
+                printf("  Apply burn %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_FORTIFY:
-                printf("  Apply fortify %i\n", t->effects[j].amount);
+                printf("  Apply fortify %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_POISON:
-                printf("  Apply poison %i\n", t->effects[j].amount);
+                printf("  Apply poison %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_RAGE:
-                printf("  Apply rage %i\n", t->effects[j].amount);
+                printf("  Apply rage %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_REGEN:
-                printf("  Apply regeneration %i\n", t->effects[j].amount);
+                printf("  Apply regeneration %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_STUN:
-                printf("  Apply stunned %i\n", t->effects[j].amount);
+                printf("  Apply stunned %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_WEAK:
-                printf("  Apply weakness %i\n", t->effects[j].amount);
+                printf("  Apply weakness %i\n", t.effect.status.effects[j].amount);
                 break;
             case SE_DMG:
-                printf("  Deal %i damage\n", t->effects[j].amount);
+                printf("  Deal %i damage\n", t.effect.status.effects[j].amount);
                 break;
             case SE_HEAL:
-                printf("  Heal %i\n", t->effects[j].amount);
+                printf("  Heal %i\n", t.effect.status.effects[j].amount);
                 break;
             default:
                 break;
@@ -286,7 +256,6 @@ int main(int argc, char **argv)
             else
             {
                 printf("Unknown direction: `%s`\n", input);
-                confirm();
                 continue;
             }
             struct Room *new_room = 0;
@@ -304,7 +273,6 @@ int main(int argc, char **argv)
             if (new_room == 0)
             {
                 printf("No exit %s\n", fmt_dir(dir));
-                confirm();
                 continue;
             }
             if (key != 0)
@@ -378,22 +346,22 @@ int main(int argc, char **argv)
                     switch (item->type)
                     {
                     case IT_ARMOR_HEAD:
-                        slot = &player.head;
+                        slot = player.equipment + EQ_HEAD;
                         break;
                     case IT_ARMOR_CHEST:
-                        slot = &player.chest;
+                        slot = player.equipment + EQ_CHEST;
                         break;
                     case IT_ARMOR_LEGS:
-                        slot = &player.legs;
+                        slot = player.equipment + EQ_LEGS;
                         break;
                     case IT_ARMOR_FEET:
-                        slot = &player.feet;
+                        slot = player.equipment + EQ_FEET;
                         break;
                     case IT_SHIELD:
-                        slot = &player.shield;
+                        slot = player.equipment + EQ_SHIELD;
                         break;
                     case IT_WEAPON:
-                        slot = &player.weapon;
+                        slot = player.equipment + EQ_WEAPON;
                         break;
                     default:
                         break;
@@ -445,9 +413,7 @@ int main(int argc, char **argv)
                 prev = item;
             }
             if (found_item)
-            {
                 update_stats(&player);
-            }
             else
             {
                 printf("Failed to find item: `%s`\n", item_name);
@@ -487,7 +453,6 @@ int main(int argc, char **argv)
         else if (strncmp(cmd_buffer, "fight ", 5) == 0)
         {
             char *enemy_name = trim_wspace(cmd_buffer + 5);
-            struct Enemy *prev = 0;
             int found = 0;
             for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
             {
@@ -496,13 +461,24 @@ int main(int argc, char **argv)
                     fight(&player.stats, &enemy->stats);
                     found = 1;
                     confirm();
-                    if (enemy->stats.hp <= 0)
+                    for (int i = 0; i < enemy->num_abilities; i++)
                     {
-                        if (prev == 0)
-                            room->enemies = enemy->next;
-                        else
-                            prev->next = enemy->next;
-                        free(enemy);
+                        struct Ability ability = enemy->abilities[i];
+                        if (ability.trigger != T_DEF)
+                            continue;
+                        resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, &player.stats, 0);
+                    }
+                    for (int i = 0; i < NUM_EQ_SLOTS; i++)
+                    {
+                        if (player.equipment[i].name[0] == 0)
+                            continue;
+                        for (int j = 0; j < player.equipment[i].num_abilities; j++)
+                        {
+                            struct Ability ability = player.equipment[i].abilities[i];
+                            if (ability.trigger != T_ATK)
+                                continue;
+                            resolve_ability(ability.result, player.stats.mana, room, &player.stats, &enemy->stats, 1);
+                        }
                     }
                     break;
                 }
@@ -512,6 +488,7 @@ int main(int argc, char **argv)
                 printf("No such enemy: `%s`", enemy_name);
                 continue;
             }
+            check_deaths(room);
         }
         else if (strncmp(cmd_buffer, "cast ", 5) == 0)
         {
@@ -530,40 +507,17 @@ int main(int argc, char **argv)
                 continue;
             }
             resolve_spell(spell, player.stats.mana, room, &player.stats);
+            check_deaths(room);
         }
         else if (strcmp(cmd_buffer, "inv") == 0 || strcmp(cmd_buffer, "inventory") == 0)
         {
             printf("\n");
-            if (player.head.name[0])
-            {
-                printf("HEAD:\n ");
-                print_item(&player.head);
-            }
-            if (player.chest.name[0])
-            {
-                printf("CHEST:\n ");
-                print_item(&player.chest);
-            }
-            if (player.legs.name[0])
-            {
-                printf("LEGS:\n ");
-                print_item(&player.legs);
-            }
-            if (player.feet.name[0])
-            {
-                printf("FEET:\n ");
-                print_item(&player.feet);
-            }
-            if (player.weapon.name[0])
-            {
-                printf("WEAPON:\n ");
-                print_item(&player.weapon);
-            }
-            if (player.shield.name[0])
-            {
-                printf("SHIELD:\n ");
-                print_item(&player.shield);
-            }
+            for (int i = 0; i < NUM_EQ_SLOTS; i++)
+                if (player.equipment[i].name[0])
+                {
+                    printf("%s:\n ", fmt_equip_slot(i));
+                    print_item(&player.equipment[i]);
+                }
             if (player.inventory)
             {
                 printf("Inventory:\n");
@@ -619,43 +573,63 @@ int main(int argc, char **argv)
             continue;
         }
         for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+            tick(&enemy->stats);
+        check_deaths(room);
+        tick(&player.stats);
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
         {
             fight(&enemy->stats, &player.stats);
+            for (int i = 0; i < enemy->num_abilities; i++)
+            {
+                struct Ability ability = enemy->abilities[i];
+                if (ability.trigger != T_ATK)
+                    continue;
+                resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, &player.stats, 0);
+            }
+            for (int i = 0; i < NUM_EQ_SLOTS; i++)
+            {
+                if (player.equipment[i].name[0] == 0)
+                    continue;
+                for (int j = 0; j < player.equipment[i].num_abilities; j++)
+                {
+                    struct Ability ability = player.equipment[i].abilities[i];
+                    if (ability.trigger != T_DEF)
+                        continue;
+                    resolve_ability(ability.result, player.stats.mana, room, &player.stats, &enemy->stats, 1);
+                }
+            }
             confirm();
         }
-        struct Enemy *prev = 0;
-        for (struct Enemy *enemy = room->enemies; enemy != 0;)
+        check_deaths(room);
+        for (int i = 0; i < NUM_EQ_SLOTS; i++)
         {
-            tick(&enemy->stats);
-            if (enemy->stats.hp <= 0)
+            if (player.equipment[i].name[0] == 0)
+                continue;
+            for (int j = 0; j < player.equipment[i].num_abilities; j++)
             {
-                printf("%s has perished.\n", enemy->stats.name);
-                if (prev == 0)
-                {
-                    room->enemies = enemy->next;
-                    free(enemy);
-                    enemy = room->enemies;
-                }
-                else
-                {
-                    prev->next = enemy->next;
-                    free(enemy);
-                    enemy = prev->next;
-                }
-            }
-            else
-            {
-                prev = enemy;
-                enemy = enemy->next;
+                struct Ability ability = player.equipment[i].abilities[i];
+                if (ability.trigger != T_TURN)
+                    continue;
+                resolve_ability(ability.result, player.stats.mana, room, &player.stats, 0, 1);
             }
         }
-        tick(&player.stats);
+        for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+        {
+            for (int i = 0; i < enemy->num_abilities; i++)
+            {
+                struct Ability ability = enemy->abilities[i];
+                if (ability.trigger != T_TURN)
+                    continue;
+                resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, 0, 0);
+            }
+        }
         if (player.stats.hp <= 0)
         {
             printf("%s has perished.\n", player.stats.name);
             confirm();
             return 0;
         }
+        check_deaths(room);
         print_room(room, dungeon);
     }
 }
@@ -674,5 +648,43 @@ char *fmt_dir(enum Direction dir)
         return "west";
     default:
         return "ERROR";
+    }
+}
+
+char *fmt_equip_slot(enum Equipment s)
+{
+    switch (s)
+    {
+    case EQ_HEAD:
+        return "HEAD";
+    case EQ_CHEST:
+        return "CHEST";
+    case EQ_LEGS:
+        return "LEGS";
+    case EQ_FEET:
+        return "FEET";
+    case EQ_WEAPON:
+        return "WEAPON";
+    case EQ_SHIELD:
+        return "SHIELD";
+    default:
+        return 0;
+    }
+}
+
+char *fmt_ability_trigger(enum Trigger t)
+{
+    switch (t)
+    {
+    case T_ATK:
+        return "attack";
+    case T_DEF:
+        return "defend";
+    case T_TURN:
+        return "turn";
+    case T_DEATH:
+        return "death";
+    default:
+        return 0;
     }
 }

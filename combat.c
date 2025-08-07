@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 int take_damage(struct Combatant *target, int dmg)
 {
@@ -61,7 +62,7 @@ void tick(struct Combatant *c)
         c->stun--;
 }
 
-void apply_effect(struct SpellEffect *effect, int mana, struct Combatant *target)
+void apply_effect(struct SpellStatus *effect, int mana, struct Combatant *target)
 {
     int magnitude = effect->amount + mana;
     switch (effect->type)
@@ -101,23 +102,61 @@ void apply_effect(struct SpellEffect *effect, int mana, struct Combatant *target
     }
 }
 
+struct Item *clone_items(struct Item *s)
+{
+    if (s == 0)
+        return 0;
+    struct Item *d = malloc(sizeof(struct Item));
+    memcpy(d, s, sizeof(struct Item));
+    d->abilities = malloc(sizeof(struct Ability) * d->num_abilities);
+    memcpy(d->abilities, s->abilities, sizeof(struct Ability) * d->num_abilities);
+    d->next = clone_items(s->next);
+    return d;
+}
+
+struct Enemy *clone_enemy(struct Enemy *s)
+{
+    struct Enemy *d = malloc(sizeof(struct Enemy));
+    memcpy(d, s, sizeof(struct Enemy));
+    d->abilities = malloc(sizeof(struct Ability) * d->num_abilities);
+    memcpy(d->abilities, s->abilities, sizeof(struct Ability) * d->num_abilities);
+    d->drops = clone_items(s->drops);
+    return d;
+}
+
+void summon(struct Enemy *enemy, struct Room *room)
+{
+    enemy = clone_enemy(enemy);
+    printf("%s has been summoned.\n", enemy->stats.name);
+    enemy->next = 0;
+    if (room->enemies == 0)
+        room->enemies = enemy;
+    else
+    {
+        struct Enemy *tail = 0;
+        for (struct Enemy *e = room->enemies; e != 0; e = e->next)
+            tail = e;
+        tail->next = enemy;
+    }
+}
+
 void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Combatant *caster)
 {
-    for (int i = 0; i < spell->num_targets; i++)
+    for (int i = 0; i < spell->num_blocks; i++)
     {
-        struct SpellTarget *target = &spell->targets[i];
-        switch (target->type)
+        struct SpellBlock block = spell->blocks[i];
+        switch (block.type)
         {
         case ST_SELF:
         case ST_EACH_ALLY:
         case ST_TARGET_ALLY:
-            for (int j = 0; j < target->num_effects; j++)
-                apply_effect(&target->effects[j], mana, caster);
+            for (int j = 0; j < block.effect.status.num_effects; j++)
+                apply_effect(&block.effect.status.effects[j], mana, caster);
             break;
         case ST_EACH_ENEMY:
             for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
-                for (int j = 0; j < target->num_effects; j++)
-                    apply_effect(&target->effects[j], mana, &enemy->stats);
+                for (int j = 0; j < block.effect.status.num_effects; j++)
+                    apply_effect(&block.effect.status.effects[j], mana, &enemy->stats);
             break;
         case ST_TARGET_ENEMY:
             char buffer[128];
@@ -130,14 +169,107 @@ void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Comb
             {
                 if (strcmp(enemy->stats.name, line) != 0)
                     continue;
-                for (int j = 0; j < target->num_effects; j++)
-                    apply_effect(&target->effects[j], mana, &enemy->stats);
+                for (int j = 0; j < block.effect.status.num_effects; j++)
+                    apply_effect(&block.effect.status.effects[j], mana, &enemy->stats);
                 break;
             }
             break;
-        default:
-            // TODO
+        case ST_SUMMON:
+            summon(block.effect.summon, room);
+            break;
+        }
+        check_deaths(room);
+    }
+}
+
+void resolve_ability(struct Spell *spell, int mana, struct Room *room, struct Combatant *source, struct Combatant *opponent, int is_player)
+{
+    for (int i = 0; i < spell->num_blocks; i++)
+    {
+        struct SpellBlock block = spell->blocks[i];
+        switch (block.type)
+        {
+        case ST_EACH_ALLY:
+            if (!is_player)
+            {
+                for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+                    for (int j = 0; j < block.effect.status.num_effects; j++)
+                        apply_effect(&block.effect.status.effects[j], mana, &enemy->stats);
+                break;
+            }
+        case ST_SELF:
+        case ST_TARGET_ALLY:
+            for (int j = 0; j < block.effect.status.num_effects; j++)
+                apply_effect(&block.effect.status.effects[j], mana, source);
+            break;
+        case ST_EACH_ENEMY:
+            if (is_player)
+            {
+                for (struct Enemy *enemy = room->enemies; enemy != 0; enemy = enemy->next)
+                    for (int j = 0; j < block.effect.status.num_effects; j++)
+                        apply_effect(&block.effect.status.effects[j], mana, &enemy->stats);
+                break;
+            }
+        case ST_TARGET_ENEMY:
+            for (int j = 0; j < block.effect.status.num_effects; j++)
+                apply_effect(&block.effect.status.effects[j], mana, opponent);
+            break;
+        case ST_SUMMON:
+            summon(block.effect.summon, room);
             break;
         }
     }
+}
+
+void check_deaths(struct Room *room)
+{
+    int death;
+    do
+    {
+        death = 0;
+        struct Enemy *prev = 0;
+        for (struct Enemy *enemy = room->enemies; enemy != 0;)
+        {
+            if (enemy->stats.hp <= 0)
+            {
+                printf("%s has perished.\n", enemy->stats.name);
+                death++;
+                confirm();
+                if (enemy->drops != 0)
+                {
+                    // find the end of the list of enemy drops
+                    struct Item *last = enemy->drops;
+                    while (last->next != 0)
+                        last = last->next;
+                    // prepend the list of enemy drops to the list of items in the room
+                    last->next = room->items;
+                    room->items = enemy->drops;
+                }
+                for (int i = 0; i < enemy->num_abilities; i++)
+                {
+                    struct Ability ability = enemy->abilities[i];
+                    if (ability.trigger != T_DEATH)
+                        continue;
+                    resolve_ability(ability.result, enemy->stats.mana, room, &enemy->stats, 0, 0);
+                }
+                if (prev == 0)
+                {
+                    room->enemies = enemy->next;
+                    free(enemy);
+                    enemy = room->enemies;
+                }
+                else
+                {
+                    prev->next = enemy->next;
+                    free(enemy);
+                    enemy = prev->next;
+                }
+            }
+            else
+            {
+                prev = enemy;
+                enemy = enemy->next;
+            }
+        }
+    } while (death);
 }

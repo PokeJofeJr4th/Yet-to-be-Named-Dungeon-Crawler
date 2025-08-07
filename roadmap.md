@@ -4,10 +4,6 @@ These are all ideas I have that may or may not make it into the final product.
 
 Easily create enemies with slight variations without duplicating lots of data. Probably only worth it once enemies get more complex
 
-### Enemy Drops
-
-Items that can only be gained when an enemy is defeated - prevents going in, taking item, leaving.
-
 ### Stunned Status Effect
 
 Prevents actions, but will be hard to balance

@@ -22,13 +22,14 @@ struct Combatant
     int stun;
 };
 
-enum SpellTargetType
+enum SpellBlockType
 {
     ST_TARGET_ENEMY,
     ST_EACH_ENEMY,
     ST_TARGET_ALLY,
     ST_EACH_ALLY,
-    ST_SELF
+    ST_SELF,
+    ST_SUMMON,
 };
 
 enum SpellEffectType
@@ -44,33 +45,59 @@ enum SpellEffectType
     SE_REGEN,
 };
 
-struct SpellEffect
+struct SpellStatus
 {
     int amount;
     enum SpellEffectType type;
 };
 
-struct SpellTarget
+union SpellEffect
 {
-    struct SpellEffect *effects;
-    int num_effects;
-    enum SpellTargetType type;
+    struct
+    {
+        struct SpellStatus *effects;
+        int num_effects;
+    } status;
+    struct Enemy *summon;
+};
+
+struct SpellBlock
+{
+    union SpellEffect effect;
+    enum SpellBlockType type;
 };
 
 struct Spell
 {
     char name[32];
-    struct SpellTarget *targets;
+    struct SpellBlock *blocks;
     char **tags;
-    int num_targets;
+    int num_blocks;
     int num_tags;
     int cost;
+};
+
+enum Trigger
+{
+    T_ATK,
+    T_DEF,
+    T_DEATH,
+    T_TURN,
+};
+
+struct Ability
+{
+    enum Trigger trigger;
+    struct Spell *result;
 };
 
 struct Enemy
 {
     struct Combatant stats;
     struct Enemy *next;
+    struct Item *drops;
+    struct Ability *abilities;
+    int num_abilities;
 };
 
 enum ItemType
@@ -89,10 +116,12 @@ struct Item
 {
     char name[32];
     struct Item *next;
+    struct Spell *grants;
+    struct Ability *abilities;
     int atk;
     int def;
     int mana;
-    struct Spell *grants;
+    int num_abilities;
     enum ItemType type;
 };
 
@@ -129,22 +158,30 @@ struct SpellPage
     struct SpellPage *next;
 };
 
+enum Equipment
+{
+    EQ_HEAD,
+    EQ_CHEST,
+    EQ_LEGS,
+    EQ_FEET,
+    EQ_WEAPON,
+    EQ_SHIELD,
+    NUM_EQ_SLOTS
+};
+
 struct Player
 {
     struct Combatant stats;
     struct Item *inventory;
     struct SpellPage *spellbook;
     // these fields are all optional. If the item name is empty, there's no item.
-    struct Item head;
-    struct Item chest;
-    struct Item legs;
-    struct Item feet;
-    struct Item weapon;
-    struct Item shield;
+    struct Item equipment[NUM_EQ_SLOTS];
 };
 
 // I/O Helper Functions
 char *fmt_dir(enum Direction);
+char *fmt_equip_slot(enum Equipment s);
+char *fmt_ability_trigger(enum Trigger t);
 char *trim_wspace(char *);
 void confirm();
 void read_input(char *buffer);
@@ -155,4 +192,6 @@ struct Dungeon *load_dungeon(char *);
 // Combat
 void fight(struct Combatant *attacker, struct Combatant *target);
 void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Combatant *caster);
+void resolve_ability(struct Spell *spell, int mana, struct Room *room, struct Combatant *source, struct Combatant *opponent, int is_player);
 void tick(struct Combatant *c);
+void check_deaths(struct Room *room);
