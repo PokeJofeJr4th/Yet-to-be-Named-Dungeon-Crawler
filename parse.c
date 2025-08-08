@@ -742,6 +742,40 @@ struct Dungeon *load_dungeon(char *filename)
             current_item->next = current_room->items;
             current_room->items = current_item;
         }
+        else if (strncmp(line, "GIVE ", 5) == 0)
+        {
+            line = trim_wspace(line + 5);
+            if (current_npc_state == 0)
+            {
+                printf("ERROR: Attempt to add given item `%s` without NPC state/option.\n", line);
+                continue;
+            }
+            current_enemy = 0;
+            current_item = new_item(line);
+            struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+            instr->data.item = current_item;
+            instr->opcode = OPC_DROP;
+            add_instr(instr, current_npc_option, current_npc_state);
+        }
+        else if (strncmp(line, "GIVE-FROM ", 10) == 0)
+        {
+            line = trim_wspace(line + 10);
+            if (current_npc_state == 0)
+            {
+                printf("ERROR: Attempt to add given item `%s` without NPC state/option.\n", line);
+                continue;
+            }
+            if ((current_item = item_from_template(line, &dungeon_tmp)) == 0)
+            {
+                printf("ERROR: Failed to find item template `%s`\n", line);
+                continue;
+            }
+            current_enemy = 0;
+            struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+            instr->data.item = current_item;
+            instr->opcode = OPC_DROP;
+            add_instr(instr, current_npc_option, current_npc_state);
+        }
         else if (strncmp(line, "DROP ", 5) == 0)
         {
             line = trim_wspace(line + 5);
@@ -1134,29 +1168,40 @@ struct Dungeon *load_dungeon(char *filename)
         else if (strncmp(line, "SUMMON ", 7) == 0)
         {
             line = trim_wspace(line + 7);
-            if (current_spell == 0)
+            if (current_spell == 0 && current_npc_state == 0)
             {
-                printf("ERROR: Attempt to add `SUMMON %s` without a spell.\n", line);
+                printf("ERROR: Attempt to add `SUMMON %s` without a spell or NPC state/option.\n", line);
                 continue;
             }
             current_spell_target = 0;
             current_item = 0;
             current_enemy = new_enemy(line);
-            struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
-            // set data values
-            enemy_block->effects.enemy = current_enemy;
-            enemy_block->type = ST_SUMMON;
-            // hook into the linked list
-            enemy_block->next = current_spell->blocks;
-            current_spell->blocks = enemy_block;
-            current_spell->num_blocks++;
+            if (current_npc_state == 0)
+            {
+                struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
+                // set data values
+                enemy_block->effects.enemy = current_enemy;
+                enemy_block->type = ST_SUMMON;
+                // hook into the linked list
+                enemy_block->next = current_spell->blocks;
+                current_spell->blocks = enemy_block;
+                current_spell->num_blocks++;
+            }
+            else
+            {
+                struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+                // set data values
+                instr->opcode = OPC_SUMMON;
+                instr->data.enemy = current_enemy;
+                add_instr(instr, current_npc_option, current_npc_state);
+            }
         }
         else if (strncmp(line, "SUMMON-FROM ", 12) == 0)
         {
             line = trim_wspace(line + 12);
-            if (current_spell == 0)
+            if (current_spell == 0 && current_npc_state == 0)
             {
-                printf("ERROR: Attempt to add `SUMMON-FROM %s` without a spell.\n", line);
+                printf("ERROR: Attempt to add `SUMMON-FROM %s` without a spell or NPC state/option.\n", line);
                 continue;
             }
             if ((current_enemy = enemy_from_template(line, &dungeon_tmp)) == 0)
@@ -1164,16 +1209,28 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Failed to find enemy template `%s`\n", line);
                 continue;
             }
-            current_spell_target = 0;
-            current_item = 0;
-            struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
-            // set data values
-            enemy_block->effects.enemy = current_enemy;
-            enemy_block->type = ST_SUMMON;
-            // hook into the linked list
-            enemy_block->next = current_spell->blocks;
-            current_spell->blocks = enemy_block;
-            current_spell->num_blocks++;
+            if (current_npc_state == 0)
+            {
+
+                current_spell_target = 0;
+                current_item = 0;
+                struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
+                // set data values
+                enemy_block->effects.enemy = current_enemy;
+                enemy_block->type = ST_SUMMON;
+                // hook into the linked list
+                enemy_block->next = current_spell->blocks;
+                current_spell->blocks = enemy_block;
+                current_spell->num_blocks++;
+            }
+            else
+            {
+                struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+                // set data values
+                instr->opcode = OPC_SUMMON;
+                instr->data.enemy = current_enemy;
+                add_instr(instr, current_npc_option, current_npc_state);
+            }
         }
         else if (strncmp(line, "EFFECT ", 7) == 0)
         {
