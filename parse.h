@@ -90,6 +90,7 @@ struct NpcInstructionTmp
     union
     {
         char text[32];
+        int id;
         struct EnemyTmp *enemy;
         struct ItemTmp *spell;
     } data;
@@ -106,6 +107,7 @@ struct NpcOptionTmp
 
 struct NpcStateTmp
 {
+    char name[32];
     struct NpcInstructionTmp *instructions;
     struct NpcOptionTmp *options;
     struct NpcStateTmp *next;

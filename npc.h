@@ -3,8 +3,8 @@
 
 enum NpcOpcode
 {
-    OPC_IF_HAS,
-    OPC_UNLESS_HAS,
+    OPC_IF_ITEM,
+    OPC_UNLESS_ITEM,
     OPC_IF_FLAG,
     OPC_UNLESS_FLAG,
     OPC_SET_FLAG,
