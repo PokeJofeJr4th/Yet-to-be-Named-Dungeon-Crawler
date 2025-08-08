@@ -1,3 +1,6 @@
+#ifndef _NPC_H
+#define _NPC_H
+
 enum NpcOpcode
 {
     OPC_IF_HAS,
@@ -35,13 +38,16 @@ struct NpcInstruction
 struct NpcOption
 {
     char text[32];
-    struct NpcInstruction instructions[8];
+    int num_instructions;
+    struct NpcInstruction *instructions;
 };
 
 struct NpcState
 {
-    struct NpcInstruction instructions[16];
-    struct NpcOption options[8];
+    struct NpcInstruction *instructions;
+    struct NpcOption *options;
+    int num_instructions;
+    int num_options;
 };
 
 struct Npc
@@ -52,3 +58,5 @@ struct Npc
     int num_states;
     int flags;
 };
+
+#endif
