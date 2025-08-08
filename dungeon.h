@@ -1,3 +1,8 @@
+#ifndef _DUNGEON_H
+#define _DUNGEON_H
+
+#include "npc.h"
+
 enum Direction
 {
     DIR_NORTH,
@@ -140,6 +145,7 @@ struct Room
     int num_tags;
     struct Enemy *enemies;
     struct Item *items;
+    struct Npc *npcs;
     struct Exit *exits;
     char **tags;
 };
@@ -195,3 +201,5 @@ void resolve_spell(struct Spell *spell, int mana, struct Room *room, struct Comb
 void resolve_ability(struct Spell *spell, int mana, struct Room *room, struct Combatant *source, struct Combatant *opponent, int is_player);
 void tick(struct Combatant *c);
 void check_deaths(struct Room *room);
+
+#endif

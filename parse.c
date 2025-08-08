@@ -3,115 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
-struct SpellStatusTmp
-{
-    struct SpellStatusTmp *next;
-    int amount;
-    enum SpellEffectType type;
-};
-
-union SpellEffectTmp
-{
-    struct
-    {
-        struct SpellStatusTmp *effects;
-        int num_effects;
-    } status;
-    struct EnemyTmp *enemy;
-};
-
-struct SpellBlockTmp
-{
-    union SpellEffectTmp effects;
-    struct SpellBlockTmp *next;
-    enum SpellBlockType type;
-};
-
-struct SpellTmp
-{
-    char name[32];
-    struct TagTmp *tags;
-    struct SpellBlockTmp *blocks;
-    struct SpellTmp *next;
-    int num_tags;
-    int num_blocks;
-    int cost;
-};
-
-struct ExitTmp
-{
-    char exit_to[32];
-    char *key;
-    struct ExitTmp *next;
-    enum Direction exit_dir;
-};
-
-struct AbilityTmp
-{
-    char result[32];
-    enum Trigger trigger;
-    struct AbilityTmp *next;
-};
-
-struct EnemyTmp
-{
-    char name[32];
-    struct EnemyTmp *next;
-    struct ItemTmp *drops;
-    struct AbilityTmp *abilities;
-    int hp;
-    int atk;
-    int def;
-    int mana;
-    int num_abilities;
-};
-
-struct ItemTmp
-{
-    char name[32];
-    char grants[32];
-    struct ItemTmp *next;
-    struct AbilityTmp *abilities;
-    int atk;
-    int def;
-    int mana;
-    int num_abilities;
-    enum ItemType type;
-};
-
-struct TagTmp
-{
-    char tag[16];
-    struct TagTmp *next;
-};
-
-struct RoomTmp
-{
-    char name[32];
-    char desc[128];
-    int num_exits;
-    int num_tags;
-    struct ExitTmp *exits;
-    struct EnemyTmp *enemies;
-    struct ItemTmp *items;
-    struct TagTmp *tags;
-    struct RoomTmp *next;
-};
-
-struct DungeonTmp
-{
-    struct RoomTmp *rooms;
-    struct SpellTmp *spells;
-    struct ItemTmp *item_templates;
-    struct EnemyTmp *enemy_templates;
-    int num_rooms;
-    int num_spells;
-};
-
-void print_dungeon_tmp(struct DungeonTmp);
-void print_dungeon(struct Dungeon *);
-struct Enemy *convert_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp);
+#include "parse.h"
 
 char *trim_wspace(char *p)
 {
@@ -131,6 +23,7 @@ struct RoomTmp *new_room(char *name)
     room->exits = 0;
     room->items = 0;
     room->tags = 0;
+    room->npcs = 0;
     // copy the name over
     strncpy(room->name, name, 31);
     room->name[31] = 0;
@@ -235,6 +128,67 @@ struct EnemyTmp *enemy_from_template(char *name, struct DungeonTmp *dungeon)
     d->next = 0;
     d->drops = clone_items_tmp(s->drops);
     return d;
+}
+
+int get_npc_flag(struct NpcTmp *n, char *flag)
+{
+    int i = n->num_flags - 1;
+    for (struct TagTmp *t = n->flags; t != 0; t = t->next, i--)
+        if (strncmp(t->tag, flag, 15) == 0)
+            return i;
+    struct TagTmp *t = malloc(sizeof(struct TagTmp));
+    strncpy(t->tag, flag, 15);
+    t->tag[15] = 0;
+    t->next = n->flags;
+    n->flags = t;
+    return n->num_flags++;
+}
+
+void add_instr(struct NpcInstructionTmp *i, struct NpcOptionTmp *o, struct NpcStateTmp *s)
+{
+    if (o)
+    {
+        i->next = o->instructions;
+        o->instructions = i;
+        o->num_instructions++;
+        return;
+    }
+    i->next = s->instructions;
+    s->instructions = i;
+    s->num_instructions++;
+}
+
+int add_flag_instr(enum NpcOpcode opc, char *flag, struct NpcTmp *n, struct NpcOptionTmp *o, struct NpcStateTmp *s)
+{
+    if (s == 0)
+    {
+        printf("ERROR: Attempt to add instruction without NPC state or option.\n");
+        return 0;
+    }
+    int flag_id = get_npc_flag(n, flag);
+    // make the new instruction
+    struct NpcInstructionTmp *i = malloc(sizeof(struct NpcInstructionTmp));
+    i->opcode = opc;
+    i->data.id = flag_id;
+    add_instr(i, o, s);
+    return 1;
+}
+
+int add_text_instr(enum NpcOpcode opc, char *text, struct NpcOptionTmp *o, struct NpcStateTmp *s)
+{
+    if (s == 0)
+    {
+        printf("ERROR: Attempt to add instruction without NPC state or option.\n");
+        return 0;
+    }
+    // make the new instruction
+    struct NpcInstructionTmp *i = malloc(sizeof(struct NpcInstructionTmp));
+    i->opcode = opc;
+    // copy over the text
+    strncpy(i->data.text, text, 31);
+    i->data.text[31] = 0;
+    add_instr(i, o, s);
+    return 1;
 }
 
 void convert_spell(struct Spell *spell, struct SpellTmp *spell_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
@@ -356,6 +310,101 @@ struct Enemy *convert_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon,
     return enemy;
 }
 
+void convert_npc_instruction(struct NpcInstruction *instr, struct NpcInstructionTmp *instr_tmp, struct NpcTmp *npc, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    instr->opcode = instr_tmp->opcode;
+    switch (instr->opcode)
+    {
+    case OPC_CAST:
+        if ((instr->data.spell = find_spell(instr_tmp->data.text, dungeon, dungeon_tmp)) == 0)
+            printf("ERROR: Couldn't find spell `%s`\n", instr_tmp->data.text);
+        break;
+    case OPC_IF_FLAG:
+    case OPC_CLEAR_FLAG:
+    case OPC_SET_FLAG:
+    case OPC_UNLESS_FLAG:
+        instr->data.id = instr_tmp->data.id;
+        break;
+    case OPC_DROP:
+        instr->data.item = convert_item(instr_tmp->data.item, dungeon, dungeon_tmp);
+        break;
+    case OPC_SUMMON:
+        instr->data.enemy = convert_enemy(instr_tmp->data.enemy, dungeon, dungeon_tmp);
+        break;
+    case OPC_SAY:
+    case OPC_IF_ITEM:
+    case OPC_UNLESS_ITEM:
+        // these all just use the text
+        instr->data.text = strdup(instr_tmp->data.text);
+        break;
+    case OPC_STATE:
+        instr->data.id = -1;
+        int i = npc->num_states - 1;
+        for (struct NpcStateTmp *t = npc->states; t != 0; t = t->next, i--)
+            if (strncmp(t->name, instr_tmp->data.text, 15) == 0)
+            {
+                instr->data.id = i;
+                break;
+            }
+        if (instr->data.id == -1)
+            printf("ERROR: Uknown state `%s`\n", instr_tmp->data.text);
+        break;
+    case OPC_DESPAWN:
+        break;
+    default:
+        printf("ERROR: Unknown opcode `%i`\n", instr->opcode);
+        break;
+    }
+}
+
+void convert_npc_option(struct NpcOption *option, struct NpcOptionTmp *option_tmp, struct NpcTmp *npc, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    // copy text
+    strcpy(option->text, option_tmp->text);
+    // convert instructions
+    option->num_instructions = option_tmp->num_instructions;
+    option->instructions = malloc(sizeof(struct NpcInstruction) * option->num_instructions);
+    struct NpcInstruction *instr = option->instructions;
+    for (struct NpcInstructionTmp *instr_tmp = option_tmp->instructions; instr_tmp != 0; instr_tmp = instr_tmp->next)
+        convert_npc_instruction(instr++, instr_tmp, npc, dungeon, dungeon_tmp);
+}
+
+void convert_npc_state(struct NpcState *state, struct NpcStateTmp *state_tmp, struct NpcTmp *npc, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    // convert instructions
+    state->num_instructions = state_tmp->num_instructions;
+    state->instructions = malloc(sizeof(struct NpcInstruction) * state->num_instructions);
+    struct NpcInstruction *instr = state->instructions;
+    for (struct NpcInstructionTmp *instr_tmp = state_tmp->instructions; instr_tmp != 0; instr_tmp = instr_tmp->next)
+        convert_npc_instruction(instr++, instr_tmp, npc, dungeon, dungeon_tmp);
+    // convert options
+    state->num_options = state_tmp->num_options;
+    state->options = malloc(sizeof(struct NpcOption) * state->num_options);
+    struct NpcOption *opt = state->options;
+    for (struct NpcOptionTmp *opt_tmp = state_tmp->options; opt_tmp != 0; opt_tmp = opt_tmp->next)
+        convert_npc_option(opt++, opt_tmp, npc, dungeon, dungeon_tmp);
+}
+
+struct Npc *convert_npcs(struct NpcTmp *npc_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    if (npc_tmp == 0)
+        return 0;
+    struct Npc *npc = malloc(sizeof(struct Npc));
+    // start with empty flags
+    npc->flags = 0;
+    // move over the name
+    strncpy(npc->name, npc_tmp->name, 31);
+    npc->name[31] = 0;
+    npc->num_states = npc_tmp->num_states;
+    npc->states = malloc(sizeof(struct NpcState) * npc->num_states);
+    struct NpcState *state = npc->states;
+    for (struct NpcStateTmp *state_tmp = npc_tmp->states; state_tmp != 0; state_tmp = state_tmp->next)
+        convert_npc_state(state++, state_tmp, npc_tmp, dungeon, dungeon_tmp);
+    // recursive call
+    npc->next = convert_npcs(npc_tmp->next, dungeon, dungeon_tmp);
+    return npc;
+}
+
 void convert_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     // start with an empty list
@@ -414,6 +463,8 @@ void convert_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *d
         *tag = strdup(tag_tmp->tag);
         tag++;
     }
+    // move over the NPCs
+    room->npcs = convert_npcs(room_tmp->npcs, dungeon, dungeon_tmp);
 }
 
 void free_item(struct ItemTmp *item)
@@ -546,6 +597,9 @@ struct Dungeon *load_dungeon(char *filename)
     struct SpellBlockTmp *current_spell_target = 0;
     struct RoomTmp *current_room = 0;
     struct ExitTmp *current_exit = 0;
+    struct NpcTmp *current_npc = 0;
+    struct NpcStateTmp *current_npc_state = 0;
+    struct NpcOptionTmp *current_npc_option = 0;
 
     while (fgets(line_buffer, 128, f))
     {
@@ -564,6 +618,9 @@ struct Dungeon *load_dungeon(char *filename)
             current_spell = 0;
             current_spell_target = 0;
             current_exit = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             // new room
             current_room = new_room(trim_wspace(line + 5));
             // hook it up to the linked list
@@ -580,6 +637,9 @@ struct Dungeon *load_dungeon(char *filename)
             }
             current_enemy = 0;
             current_item = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             enum Direction dir;
             char *exit;
             if (strncmp(line, "NORTH ", 6) == 0)
@@ -635,6 +695,9 @@ struct Dungeon *load_dungeon(char *filename)
         {
             current_enemy = 0;
             current_exit = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             current_item = new_item(trim_wspace(line + 14));
             // hook up to the linked list
             current_item->next = dungeon_tmp.item_templates;
@@ -649,6 +712,9 @@ struct Dungeon *load_dungeon(char *filename)
             }
             current_enemy = 0;
             current_exit = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             current_item = new_item(trim_wspace(line + 5));
             // hook up to the linked list
             current_item->next = current_room->items;
@@ -664,6 +730,9 @@ struct Dungeon *load_dungeon(char *filename)
             }
             current_enemy = 0;
             current_exit = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             if ((current_item = item_from_template(line, &dungeon_tmp)) == 0)
             {
                 printf("ERROR: Failed to find item template `%s`\n", line);
@@ -672,6 +741,40 @@ struct Dungeon *load_dungeon(char *filename)
             // hook up to the linked list
             current_item->next = current_room->items;
             current_room->items = current_item;
+        }
+        else if (strncmp(line, "GIVE ", 5) == 0)
+        {
+            line = trim_wspace(line + 5);
+            if (current_npc_state == 0)
+            {
+                printf("ERROR: Attempt to add given item `%s` without NPC state/option.\n", line);
+                continue;
+            }
+            current_enemy = 0;
+            current_item = new_item(line);
+            struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+            instr->data.item = current_item;
+            instr->opcode = OPC_DROP;
+            add_instr(instr, current_npc_option, current_npc_state);
+        }
+        else if (strncmp(line, "GIVE-FROM ", 10) == 0)
+        {
+            line = trim_wspace(line + 10);
+            if (current_npc_state == 0)
+            {
+                printf("ERROR: Attempt to add given item `%s` without NPC state/option.\n", line);
+                continue;
+            }
+            if ((current_item = item_from_template(line, &dungeon_tmp)) == 0)
+            {
+                printf("ERROR: Failed to find item template `%s`\n", line);
+                continue;
+            }
+            current_enemy = 0;
+            struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+            instr->data.item = current_item;
+            instr->opcode = OPC_DROP;
+            add_instr(instr, current_npc_option, current_npc_state);
         }
         else if (strncmp(line, "DROP ", 5) == 0)
         {
@@ -781,6 +884,9 @@ struct Dungeon *load_dungeon(char *filename)
             current_spell = 0;
             current_spell_target = 0;
             current_room = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             current_enemy = new_enemy(line);
             //  hook up to the linked list
             current_enemy->next = dungeon_tmp.enemy_templates;
@@ -797,6 +903,9 @@ struct Dungeon *load_dungeon(char *filename)
             // update parser state
             current_exit = 0;
             current_item = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             current_enemy = new_enemy(line);
             //  hook up to the linked list
             current_enemy->next = current_room->enemies;
@@ -818,6 +927,9 @@ struct Dungeon *load_dungeon(char *filename)
             // update parser state
             current_exit = 0;
             current_item = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             //  hook up to the linked list
             current_enemy->next = current_room->enemies;
             current_room->enemies = current_enemy;
@@ -914,13 +1026,19 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add a description without a room.\n");
                 continue;
             }
+            // update parser state
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
+            current_enemy = 0;
+            current_exit = 0;
+            current_item = 0;
             // add a description to the current room
             strncpy(current_room->desc, trim_wspace(line + 5), 127);
             current_room->desc[127] = 0;
         }
         else if (strncmp(line, "TAG ", 4) == 0)
         {
-            current_exit = 0;
             struct TagTmp *tag_tmp = malloc(sizeof(struct TagTmp));
             // copy the tag name
             strncpy(tag_tmp->tag, trim_wspace(line + 4), 15);
@@ -943,13 +1061,24 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add tag without a spell or room: `%s`\n", line + 4);
                 continue;
             }
+            // update parser state
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
+            current_enemy = 0;
+            current_exit = 0;
+            current_item = 0;
         }
         else if (strncmp(line, "SPELL ", 6) == 0)
         {
+            // update parser state
             current_enemy = 0;
             current_item = 0;
             current_spell_target = 0;
             current_room = 0;
+            current_npc = 0;
+            current_npc_state = 0;
+            current_npc_option = 0;
             line = trim_wspace(line + 6);
             current_spell = malloc(sizeof(struct SpellTmp));
             strncpy(current_spell->name, line, 31);
@@ -979,8 +1108,9 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Attempt to add cost without spell.\n");
                 continue;
             }
-            current_enemy = 0;
-            current_item = 0;
+            // update parser state
+            current_spell_target = 0;
+            // fill in data
             current_spell->cost = cost;
         }
         else if (strncmp(line, "TARGET ", 7) == 0)
@@ -1038,29 +1168,40 @@ struct Dungeon *load_dungeon(char *filename)
         else if (strncmp(line, "SUMMON ", 7) == 0)
         {
             line = trim_wspace(line + 7);
-            if (current_spell == 0)
+            if (current_spell == 0 && current_npc_state == 0)
             {
-                printf("ERROR: Attempt to add `SUMMON %s` without a spell.\n", line);
+                printf("ERROR: Attempt to add `SUMMON %s` without a spell or NPC state/option.\n", line);
                 continue;
             }
             current_spell_target = 0;
             current_item = 0;
             current_enemy = new_enemy(line);
-            struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
-            // set default values
-            enemy_block->effects.enemy = current_enemy;
-            enemy_block->type = ST_SUMMON;
-            // hook into the linked list
-            enemy_block->next = current_spell->blocks;
-            current_spell->blocks = enemy_block;
-            current_spell->num_blocks++;
+            if (current_npc_state == 0)
+            {
+                struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
+                // set data values
+                enemy_block->effects.enemy = current_enemy;
+                enemy_block->type = ST_SUMMON;
+                // hook into the linked list
+                enemy_block->next = current_spell->blocks;
+                current_spell->blocks = enemy_block;
+                current_spell->num_blocks++;
+            }
+            else
+            {
+                struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+                // set data values
+                instr->opcode = OPC_SUMMON;
+                instr->data.enemy = current_enemy;
+                add_instr(instr, current_npc_option, current_npc_state);
+            }
         }
         else if (strncmp(line, "SUMMON-FROM ", 12) == 0)
         {
             line = trim_wspace(line + 12);
-            if (current_spell == 0)
+            if (current_spell == 0 && current_npc_state == 0)
             {
-                printf("ERROR: Attempt to add `SUMMON-FROM %s` without a spell.\n", line);
+                printf("ERROR: Attempt to add `SUMMON-FROM %s` without a spell or NPC state/option.\n", line);
                 continue;
             }
             if ((current_enemy = enemy_from_template(line, &dungeon_tmp)) == 0)
@@ -1068,16 +1209,28 @@ struct Dungeon *load_dungeon(char *filename)
                 printf("ERROR: Failed to find enemy template `%s`\n", line);
                 continue;
             }
-            current_spell_target = 0;
-            current_item = 0;
-            struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
-            // set default values
-            enemy_block->effects.enemy = current_enemy;
-            enemy_block->type = ST_SUMMON;
-            // hook into the linked list
-            enemy_block->next = current_spell->blocks;
-            current_spell->blocks = enemy_block;
-            current_spell->num_blocks++;
+            if (current_npc_state == 0)
+            {
+
+                current_spell_target = 0;
+                current_item = 0;
+                struct SpellBlockTmp *enemy_block = malloc(sizeof(struct SpellBlockTmp));
+                // set data values
+                enemy_block->effects.enemy = current_enemy;
+                enemy_block->type = ST_SUMMON;
+                // hook into the linked list
+                enemy_block->next = current_spell->blocks;
+                current_spell->blocks = enemy_block;
+                current_spell->num_blocks++;
+            }
+            else
+            {
+                struct NpcInstructionTmp *instr = malloc(sizeof(struct NpcInstructionTmp));
+                // set data values
+                instr->opcode = OPC_SUMMON;
+                instr->data.enemy = current_enemy;
+                add_instr(instr, current_npc_option, current_npc_state);
+            }
         }
         else if (strncmp(line, "EFFECT ", 7) == 0)
         {
@@ -1137,7 +1290,7 @@ struct Dungeon *load_dungeon(char *filename)
                 continue;
             }
             struct SpellStatusTmp *current_effect = malloc(sizeof(struct SpellStatusTmp));
-            // set our values
+            // set data values
             current_effect->amount = amount;
             current_effect->type = SE_DMG;
             // hook into the linked list
@@ -1159,7 +1312,7 @@ struct Dungeon *load_dungeon(char *filename)
                 continue;
             }
             struct SpellStatusTmp *current_effect = malloc(sizeof(struct SpellStatusTmp));
-            // set our values
+            // set data values
             current_effect->amount = amount;
             current_effect->type = SE_HEAL;
             // hook into the linked list
@@ -1220,6 +1373,170 @@ struct Dungeon *load_dungeon(char *filename)
                 ability->next = current_enemy->abilities;
                 current_enemy->abilities = ability;
             }
+        }
+        else if (strncmp(line, "NPC ", 4) == 0)
+        {
+            line = trim_wspace(line + 4);
+            if (current_room == 0)
+            {
+                printf("ERROR: Attempt to add NPC `%s` without room.\n", line);
+                continue;
+            }
+            // update parser state
+            current_enemy = 0;
+            current_item = 0;
+            current_exit = 0;
+            current_npc_option = 0;
+            current_npc_state = 0;
+            // make the new NPC with default values
+            current_npc = malloc(sizeof(struct NpcTmp));
+            current_npc->flags = 0;
+            current_npc->num_flags = 0;
+            current_npc->states = 0;
+            current_npc->num_states = 0;
+            // copy the name
+            strncpy(current_npc->name, line, 31);
+            current_npc->name[31] = 0;
+            // hook into the linked list
+            current_npc->next = current_room->npcs;
+            current_room->npcs = current_npc;
+        }
+        else if (strncmp(line, "STATE ", 6) == 0)
+        {
+            line = trim_wspace(line + 6);
+            if (current_npc == 0)
+            {
+                printf("ERROR: Attempt to add state `%s` without NPC.\n", line);
+                continue;
+            }
+            // update parser state
+            current_npc_option = 0;
+            // make the new NPC state with default values
+            current_npc_state = malloc(sizeof(struct NpcStateTmp));
+            current_npc_state->instructions = 0;
+            current_npc_state->num_instructions = 0;
+            current_npc_state->num_options = 0;
+            current_npc_state->options = 0;
+            // copy the name
+            strncpy(current_npc_state->name, line, 31);
+            current_npc_state->name[31] = 0;
+            // hook into the linked list
+            current_npc_state->next = current_npc->states;
+            current_npc->states = current_npc_state;
+            current_npc->num_states++;
+        }
+        else if (strncmp(line, "OPTION ", 7) == 0)
+        {
+            line = trim_wspace(line + 7);
+            if (current_npc_state == 0)
+            {
+                printf("ERROR: Attempt to add option `%s` without NPC state.\n", line);
+                continue;
+            }
+            // make the new NPC option with default values
+            current_npc_option = malloc(sizeof(struct NpcOptionTmp));
+            current_npc_option->instructions = 0;
+            current_npc_option->num_instructions = 0;
+            // copy the text
+            strncpy(current_npc_option->text, line, 31);
+            current_npc_option->text[31] = 0;
+            // hook into the linked list
+            current_npc_option->next = current_npc_state->options;
+            current_npc_state->options = current_npc_option;
+            current_npc_state->num_options++;
+        }
+        else if (strncmp(line, "TO STATE ", 9) == 0)
+        {
+            line = trim_wspace(line + 9);
+            if (add_text_instr(OPC_STATE, line, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "IF ITEM ", 8) == 0)
+        {
+            line = trim_wspace(line + 8);
+            if (add_text_instr(OPC_IF_ITEM, line, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "UNLESS ITEM ", 12) == 0)
+        {
+            line = trim_wspace(line + 12);
+            if (add_text_instr(OPC_UNLESS_ITEM, line, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "IF FLAG ", 8) == 0)
+        {
+            line = trim_wspace(line + 8);
+            if (add_flag_instr(OPC_IF_FLAG, line, current_npc, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "UNLESS FLAG ", 12) == 0)
+        {
+            line = trim_wspace(line + 12);
+            if (add_flag_instr(OPC_UNLESS_FLAG, line, current_npc, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "SET FLAG ", 9) == 0)
+        {
+            line = trim_wspace(line + 9);
+            if (add_flag_instr(OPC_SET_FLAG, line, current_npc, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "CLEAR FLAG ", 11) == 0)
+        {
+            line = trim_wspace(line + 11);
+            if (add_flag_instr(OPC_CLEAR_FLAG, line, current_npc, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "SAY ", 4) == 0)
+        {
+            line = trim_wspace(line + 4);
+            if (add_text_instr(OPC_SAY, line, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strncmp(line, "CAST ", 5) == 0)
+        {
+            line = trim_wspace(line + 5);
+            if (add_text_instr(OPC_CAST, line, current_npc_option, current_npc_state))
+            {
+                current_enemy = 0;
+                current_item = 0;
+            }
+        }
+        else if (strcmp(line, "DESPAWN") == 0)
+        {
+            if (current_npc_state == 0)
+            {
+                printf("ERROR: Attempt to despawn without NPC state or option.\n");
+                continue;
+            }
+            // make the new instruction
+            struct NpcInstructionTmp *i = malloc(sizeof(struct NpcInstructionTmp));
+            i->opcode = OPC_DESPAWN;
+            add_instr(i, current_npc_option, current_npc_state);
         }
         else if (*line != 0)
         {
