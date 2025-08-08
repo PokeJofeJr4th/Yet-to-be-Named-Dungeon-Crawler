@@ -92,7 +92,7 @@ struct NpcInstructionTmp
         char text[32];
         int id;
         struct EnemyTmp *enemy;
-        struct ItemTmp *spell;
+        struct ItemTmp *item;
     } data;
     struct NpcInstructionTmp *next;
 };

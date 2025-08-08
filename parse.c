@@ -310,6 +310,101 @@ struct Enemy *convert_enemy(struct EnemyTmp *enemy_tmp, struct Dungeon *dungeon,
     return enemy;
 }
 
+void convert_npc_instruction(struct NpcInstruction *instr, struct NpcInstructionTmp *instr_tmp, struct NpcTmp *npc, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    instr->opcode = instr_tmp->opcode;
+    switch (instr->opcode)
+    {
+    case OPC_CAST:
+        if ((instr->data.spell = find_spell(instr_tmp->data.text, dungeon, dungeon_tmp)) == 0)
+            printf("ERROR: Couldn't find spell `%s`\n", instr_tmp->data.text);
+        break;
+    case OPC_IF_FLAG:
+    case OPC_CLEAR_FLAG:
+    case OPC_SET_FLAG:
+    case OPC_UNLESS_FLAG:
+        instr->data.id = instr_tmp->data.id;
+        break;
+    case OPC_DROP:
+        instr->data.item = convert_item(instr_tmp->data.item, dungeon, dungeon_tmp);
+        break;
+    case OPC_SUMMON:
+        instr->data.enemy = convert_enemy(instr_tmp->data.enemy, dungeon, dungeon_tmp);
+        break;
+    case OPC_SAY:
+    case OPC_IF_ITEM:
+    case OPC_UNLESS_ITEM:
+        // these all just use the text
+        instr->data.text = strdup(instr_tmp->data.text);
+        break;
+    case OPC_STATE:
+        instr->data.id = -1;
+        int i = npc->num_states - 1;
+        for (struct NpcStateTmp *t = npc->states; t != 0; t = t->next, i--)
+            if (strncmp(t->name, instr_tmp->data.text, 15) == 0)
+            {
+                instr->data.id = i;
+                break;
+            }
+        if (instr->data.id == -1)
+            printf("ERROR: Uknown state `%s`\n", instr_tmp->data.text);
+        break;
+    case OPC_DESPAWN:
+        break;
+    default:
+        printf("ERROR: Unknown opcode `%i`\n", instr->opcode);
+        break;
+    }
+}
+
+void convert_npc_option(struct NpcOption *option, struct NpcOptionTmp *option_tmp, struct NpcTmp *npc, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    // copy text
+    strcpy(option->text, option_tmp->text);
+    // convert instructions
+    option->num_instructions = option_tmp->num_instructions;
+    option->instructions = malloc(sizeof(struct NpcInstruction) * option->num_instructions);
+    struct NpcInstruction *instr = option->instructions;
+    for (struct NpcInstructionTmp *instr_tmp = option_tmp->instructions; instr_tmp != 0; instr_tmp = instr_tmp->next)
+        convert_npc_instruction(instr++, instr_tmp, npc, dungeon, dungeon_tmp);
+}
+
+void convert_npc_state(struct NpcState *state, struct NpcStateTmp *state_tmp, struct NpcTmp *npc, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    // convert instructions
+    state->num_instructions = state_tmp->num_instructions;
+    state->instructions = malloc(sizeof(struct NpcInstruction) * state->num_instructions);
+    struct NpcInstruction *instr = state->instructions;
+    for (struct NpcInstructionTmp *instr_tmp = state_tmp->instructions; instr_tmp != 0; instr_tmp = instr_tmp->next)
+        convert_npc_instruction(instr++, instr_tmp, npc, dungeon, dungeon_tmp);
+    // convert options
+    state->num_options = state_tmp->num_options;
+    state->options = malloc(sizeof(struct NpcOption) * state->num_options);
+    struct NpcOption *opt = state->options;
+    for (struct NpcOptionTmp *opt_tmp = state_tmp->options; opt_tmp != 0; opt_tmp = opt_tmp->next)
+        convert_npc_option(opt++, opt_tmp, npc, dungeon, dungeon_tmp);
+}
+
+struct Npc *convert_npcs(struct NpcTmp *npc_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
+{
+    if (npc_tmp == 0)
+        return 0;
+    struct Npc *npc = malloc(sizeof(struct Npc));
+    // start with empty flags
+    npc->flags = 0;
+    // move over the name
+    strncpy(npc->name, npc_tmp->name, 31);
+    npc->name[31] = 0;
+    npc->num_states = npc_tmp->num_states;
+    npc->states = malloc(sizeof(struct NpcState) * npc->num_states);
+    struct NpcState *state = npc->states;
+    for (struct NpcStateTmp *state_tmp = npc_tmp->states; state_tmp != 0; state_tmp = state_tmp->next)
+        convert_npc_state(state++, state_tmp, npc_tmp, dungeon, dungeon_tmp);
+    // recursive call
+    npc->next = convert_npcs(npc_tmp->next, dungeon, dungeon_tmp);
+    return npc;
+}
+
 void convert_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *dungeon, struct DungeonTmp *dungeon_tmp)
 {
     // start with an empty list
@@ -368,6 +463,8 @@ void convert_room(struct Room *room, struct RoomTmp *room_tmp, struct Dungeon *d
         *tag = strdup(tag_tmp->tag);
         tag++;
     }
+    // move over the NPCs
+    room->npcs = convert_npcs(room_tmp->npcs, dungeon, dungeon_tmp);
 }
 
 void free_item(struct ItemTmp *item)
